@@ -1,14 +1,19 @@
 import Account from '../models/Account.js';
+import Transaction from '../models/Transaction.js';
 
-// @desc    Get all accounts
+// @desc    Get all accounts with their corresponding transactions
 // @route   GET /api/accounts
 export const getAccounts = async (req, res) => {
   try {
     const accounts = await Account.find({});
-    // Map _id to id for frontend compatibility
+    const transactions = await Transaction.find({});
+
+    // Map _id to id for frontend compatibility and embed transactions
     const formattedAccounts = accounts.map(acc => {
-      const formattedTxs = acc.transactions.map(tx => ({
+      const accTxList = transactions.filter(tx => tx.accountId.toString() === acc._id.toString());
+      const formattedTxs = accTxList.map(tx => ({
         id: tx._id,
+        companyName: tx.companyName,
         date: tx.date,
         description: tx.description,
         type: tx.type,
@@ -16,7 +21,8 @@ export const getAccounts = async (req, res) => {
         reference: tx.reference,
         document: tx.document,
         dueDate: tx.dueDate,
-        exchangeType: tx.exchangeType
+        exchangeType: tx.exchangeType,
+        createdAt: tx.createdAt
       }));
       return {
         id: acc._id,
@@ -46,8 +52,7 @@ export const createAccount = async (req, res) => {
       type: type || 'company',
       color: color || '#1e3a5f',
       bgColor: bgColor || '#e8edf5',
-      openingBalance: openingBalance || 0,
-      transactions: []
+      openingBalance: openingBalance || 0
     });
 
     const createdAccount = await account.save();
@@ -113,7 +118,9 @@ export const addTransaction = async (req, res) => {
     const account = await Account.findById(req.params.id);
 
     if (account) {
-      const transaction = {
+      const transaction = new Transaction({
+        accountId: req.params.id,
+        companyName: account.name,
         date,
         description,
         type,
@@ -122,23 +129,22 @@ export const addTransaction = async (req, res) => {
         document,
         dueDate,
         exchangeType
-      };
+      });
 
-      account.transactions.push(transaction);
-      await account.save();
+      await transaction.save();
       
-      // Return the new transaction with _id mapped to id
-      const newTx = account.transactions[account.transactions.length - 1];
       res.status(201).json({
-        id: newTx._id,
-        date: newTx.date,
-        description: newTx.description,
-        type: newTx.type,
-        amount: newTx.amount,
-        reference: newTx.reference,
-        document: newTx.document,
-        dueDate: newTx.dueDate,
-        exchangeType: newTx.exchangeType
+        id: transaction._id,
+        companyName: transaction.companyName,
+        date: transaction.date,
+        description: transaction.description,
+        type: transaction.type,
+        amount: transaction.amount,
+        reference: transaction.reference,
+        document: transaction.document,
+        dueDate: transaction.dueDate,
+        exchangeType: transaction.exchangeType,
+        createdAt: transaction.createdAt
       });
     } else {
       res.status(404).json({ message: 'Account not found' });
@@ -152,17 +158,12 @@ export const addTransaction = async (req, res) => {
 // @route   DELETE /api/accounts/:id/transactions/:txId
 export const deleteTransaction = async (req, res) => {
   try {
-    const account = await Account.findById(req.params.id);
+    const transaction = await Transaction.findByIdAndDelete(req.params.txId);
 
-    if (account) {
-      account.transactions = account.transactions.filter(
-        (tx) => tx._id.toString() !== req.params.txId
-      );
-
-      await account.save();
+    if (transaction) {
       res.json({ message: 'Transaction removed' });
     } else {
-      res.status(404).json({ message: 'Account not found' });
+      res.status(404).json({ message: 'Transaction not found' });
     }
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -176,11 +177,11 @@ export const seedAccounts = async (req, res) => {
     const count = await Account.countDocuments({});
     if (count === 0) {
       const initialAccounts = [
-        { name: "Company 1", type: "company", color: "#1e3a5f", bgColor: "#e8edf5", openingBalance: 125000, transactions: [] },
-        { name: "Company 2", type: "company", color: "#065f46", bgColor: "#d1fae5", openingBalance: 89500, transactions: [] },
-        { name: "Company 3", type: "company", color: "#7c2d12", bgColor: "#fef3c7", openingBalance: 210000, transactions: [] },
-        { name: "Company 4", type: "company", color: "#4c1d95", bgColor: "#ede9fe", openingBalance: 55000, transactions: [] },
-        { name: "Overdraft Account", type: "overdraft", color: "#9f1239", bgColor: "#ffe4e6", openingBalance: -45000, transactions: [] }
+        { name: "Company 1", type: "company", color: "#1e3a5f", bgColor: "#e8edf5", openingBalance: 125000 },
+        { name: "Company 2", type: "company", color: "#065f46", bgColor: "#d1fae5", openingBalance: 89500 },
+        { name: "Company 3", type: "company", color: "#7c2d12", bgColor: "#fef3c7", openingBalance: 210000 },
+        { name: "Company 4", type: "company", color: "#4c1d95", bgColor: "#ede9fe", openingBalance: 55000 },
+        { name: "Overdraft Account", type: "overdraft", color: "#9f1239", bgColor: "#ffe4e6", openingBalance: -45000 }
       ];
       await Account.insertMany(initialAccounts);
       res.json({ message: 'Database seeded successfully' });
@@ -197,6 +198,7 @@ export const seedAccounts = async (req, res) => {
 export const clearAccounts = async (req, res) => {
   try {
     await Account.deleteMany({});
+    await Transaction.deleteMany({});
     res.json({ message: 'All database records cleared successfully' });
   } catch (error) {
     res.status(500).json({ message: error.message });
