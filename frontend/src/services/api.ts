@@ -48,6 +48,19 @@ export const accountService = {
     return response.json();
   },
 
+  deleteAccount: async (id: string, password: string) => {
+    const response = await fetch(`${API_URL}/${id}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ password }),
+    });
+    if (!response.ok) {
+      const data = await response.json();
+      throw new Error(data.message || 'Failed to delete account');
+    }
+    return response.json();
+  },
+
   seedAccounts: async () => {
     const response = await fetch(`${API_URL}/seed`, {
       method: 'POST',

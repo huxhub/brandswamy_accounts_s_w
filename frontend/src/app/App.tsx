@@ -909,7 +909,16 @@ function Dashboard({
 // ─── Main App ──────────────────────────────────────────────────────────────────
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(!!authService.getCurrentUser());
-  const { accounts, loading, addTransaction: handleAddTx, deleteTransaction: handleDelTx, saveOpeningBalance: handleSaveBal, addAccount: handleAddAccount, editAccountName } = useAccountsController(isAuthenticated);
+  const { 
+    accounts, 
+    loading, 
+    addTransaction: handleAddTx, 
+    deleteTransaction: handleDelTx, 
+    saveOpeningBalance: handleSaveBal, 
+    addAccount: handleAddAccount, 
+    editAccountName,
+    deleteAccount: handleDeleteAccount 
+  } = useAccountsController(isAuthenticated);
   const [activeTab, setActiveTab] = useState<string>("dashboard");
   const [showForm, setShowForm] = useState(false);
   const [showAddCompany, setShowAddCompany] = useState(false);
@@ -922,6 +931,10 @@ export default function App() {
   const [editingName, setEditingName] = useState<string | null>(null);
   const [nameInput, setNameInput] = useState("");
   const [viewDoc, setViewDoc] = useState<AttachedDoc | null>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [deleteConfirmPassword, setDeleteConfirmPassword] = useState("");
+  const [deleteError, setDeleteError] = useState("");
+  const [deleteAccountId, setDeleteAccountId] = useState<string | null>(null);
   const [form, setForm] = useState({
     date: today,
     description: "",
@@ -996,6 +1009,25 @@ export default function App() {
     setCompanyForm({ name: "", type: "company", openingBalance: "", color: "#1e3a5f" });
     setShowAddCompany(false);
     if (newId) setActiveTab(newId);
+  };
+
+  const handleDeleteCompany = async () => {
+    if (!deleteAccountId) return;
+    if (!deleteConfirmPassword.trim()) {
+      setDeleteError("Password is required");
+      return;
+    }
+
+    const res = await handleDeleteAccount(deleteAccountId, deleteConfirmPassword);
+    if (res?.success) {
+      setShowDeleteDialog(false);
+      setDeleteConfirmPassword("");
+      setDeleteAccountId(null);
+      setDeleteError("");
+      setActiveTab("dashboard");
+    } else {
+      setDeleteError(res?.message || "Failed to delete account");
+    }
   };
 
   const addTransaction = () => {
@@ -1307,12 +1339,26 @@ export default function App() {
                         </button>
                       </div>
                     ) : (
-                      <div className="flex items-center gap-2 group cursor-pointer mb-0.5" onClick={() => {
-                        setEditingName(activeAccount.id);
-                        setNameInput(activeAccount.name);
-                      }}>
-                        <h2 className="text-xl font-bold text-foreground">{activeAccount.name}</h2>
-                        <Edit3 size={14} className="text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                      <div className="flex items-center gap-3 mb-0.5">
+                        <div className="flex items-center gap-2 group cursor-pointer" onClick={() => {
+                          setEditingName(activeAccount.id);
+                          setNameInput(activeAccount.name);
+                        }}>
+                          <h2 className="text-xl font-bold text-foreground">{activeAccount.name}</h2>
+                          <Edit3 size={14} className="text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                        </div>
+                        <button
+                          onClick={() => {
+                            setDeleteAccountId(activeAccount.id);
+                            setDeleteConfirmPassword("");
+                            setDeleteError("");
+                            setShowDeleteDialog(true);
+                          }}
+                          className="p-1 rounded text-red-500 hover:bg-red-50 transition-colors"
+                          title="Delete Company"
+                        >
+                          <Trash2 size={16} />
+                        </button>
                       </div>
                     )}
                     <p className="text-sm text-muted-foreground">
@@ -2254,6 +2300,68 @@ export default function App() {
                 className="flex-1 py-2.5 rounded-lg bg-primary text-white text-sm font-semibold flex items-center justify-center gap-2 hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
               >
                 Transfer Funds
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteDialog && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+            <div className="px-6 py-4 border-b border-border flex items-center justify-between bg-red-50">
+              <h3 className="font-semibold text-lg text-red-700 flex items-center gap-2">
+                <Trash2 size={20} />
+                Delete Account
+              </h3>
+              <button 
+                onClick={() => setShowDeleteDialog(false)} 
+                className="text-muted-foreground hover:bg-red-100/50 p-1.5 rounded-lg transition-colors"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Are you sure you want to delete <strong className="text-foreground">{activeAccount?.name}</strong>? This action is permanent and will delete all associated transactions.
+              </p>
+              
+              <div>
+                <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Enter Password to Confirm</label>
+                <input
+                  type="password"
+                  value={deleteConfirmPassword}
+                  onChange={e => setDeleteConfirmPassword(e.target.value)}
+                  className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500/30 bg-input-background"
+                  placeholder="Enter your password"
+                  autoFocus
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') {
+                      handleDeleteCompany();
+                    }
+                  }}
+                />
+              </div>
+
+              {deleteError && (
+                <div className="text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg p-2.5">
+                  {deleteError}
+                </div>
+              )}
+            </div>
+            <div className="px-6 py-4 bg-gray-50 border-t border-border flex justify-end gap-3">
+              <button 
+                onClick={() => setShowDeleteDialog(false)} 
+                className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleDeleteCompany} 
+                className="px-4 py-2 text-sm font-medium bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors shadow-sm"
+              >
+                Confirm Delete
               </button>
             </div>
           </div>

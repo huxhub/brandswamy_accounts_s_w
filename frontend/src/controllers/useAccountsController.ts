@@ -77,11 +77,23 @@ export const useAccountsController = (isAuthenticated: boolean) => {
     }
   };
 
+  const deleteAccount = async (accountId: string, password: string) => {
+    try {
+      const res = await accountService.deleteAccount(accountId, password);
+      setAccounts(prev => prev.filter(a => a.id !== accountId));
+      return { success: true };
+    } catch (error: any) {
+      console.error("Failed to delete account", error);
+      return { success: false, message: error.message || "Failed to delete account" };
+    }
+  };
+
   return {
     accounts,
     loading,
     addAccount,
     editAccountName,
+    deleteAccount,
     addTransaction,
     deleteTransaction,
     saveOpeningBalance

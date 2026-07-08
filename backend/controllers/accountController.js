@@ -1,5 +1,6 @@
 import Account from '../models/Account.js';
 import Transaction from '../models/Transaction.js';
+import User from '../models/User.js';
 
 // @desc    Get all accounts with their corresponding transactions
 // @route   GET /api/accounts
@@ -204,3 +205,35 @@ export const clearAccounts = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+// @desc    Delete a single account and all its transactions
+// @route   DELETE /api/accounts/:id
+export const deleteAccount = async (req, res) => {
+  try {
+    const { password } = req.body;
+    if (!password) {
+      return res.status(400).json({ message: 'Password is required' });
+    }
+
+    // Verify user's password
+    const user = await User.findById(req.user._id);
+    if (!user || !(await user.matchPassword(password))) {
+      return res.status(401).json({ message: 'Incorrect password' });
+    }
+
+    const account = await Account.findById(req.params.id);
+    if (!account) {
+      return res.status(404).json({ message: 'Account not found' });
+    }
+
+    // Delete the account
+    await Account.findByIdAndDelete(req.params.id);
+    // Delete all transactions associated with this account
+    await Transaction.deleteMany({ accountId: req.params.id });
+
+    res.json({ message: 'Account and associated transactions removed successfully' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
