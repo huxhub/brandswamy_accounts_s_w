@@ -1338,7 +1338,7 @@ export default function App() {
                 <div className="bg-white rounded-xl border border-border p-4">
                   <div className="text-xs text-muted-foreground mb-1">Opening Balance</div>
                   {editingOpening === activeAccount.id ? (
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1.5">
                       <input
                         type="number"
                         value={openingInput}
@@ -1350,19 +1350,30 @@ export default function App() {
                           if (e.key === "Escape") setEditingOpening(null);
                         }}
                       />
-                      <button onClick={() => saveOpeningBalance(activeAccount.id)} className="text-xs text-accent font-semibold">✓</button>
+                      <button 
+                        onClick={() => saveOpeningBalance(activeAccount.id)} 
+                        className="p-1 rounded bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors"
+                        title="Save"
+                      >
+                        <Check size={14} />
+                      </button>
+                      <button 
+                        onClick={() => setEditingOpening(null)} 
+                        className="p-1 rounded bg-gray-50 text-gray-700 hover:bg-gray-100 transition-colors"
+                        title="Cancel"
+                      >
+                        <X size={14} />
+                      </button>
                     </div>
                   ) : (
-                    <div className="flex items-center gap-2">
+                    <div 
+                      className="flex items-center gap-2 group cursor-pointer"
+                      onClick={() => { setEditingOpening(activeAccount.id); setOpeningInput(String(activeAccount.openingBalance)); }}
+                    >
                       <div className={`text-base font-mono font-bold ${activeAccount.openingBalance < 0 ? "text-red-500" : "text-foreground"}`}>
                         {fmtSign(activeAccount.openingBalance)}
                       </div>
-                      {/* <button
-                        onClick={() => { setEditingOpening(activeAccount.id); setOpeningInput(String(activeAccount.openingBalance)); }}
-                        className="text-muted-foreground hover:text-accent transition-colors"
-                      >
-                        <Edit3 size={12} />
-                      </button> */}
+                      <Edit3 size={14} className="text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                     </div>
                   )}
                 </div>
