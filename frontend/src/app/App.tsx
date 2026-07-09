@@ -1572,23 +1572,7 @@ export default function App() {
             <span className="sm:hidden">Report</span>
           </button>
           
-          <button
-            onClick={() => {
-              setActiveTab("dashboard");
-              setTimeout(() => {
-                document.getElementById("reminders-section")?.scrollIntoView({ behavior: 'smooth' });
-              }, 100);
-            }}
-            className="relative flex items-center justify-center p-2 rounded-lg bg-white/15 hover:bg-white/25 text-white transition-all"
-            title="Due Date Reminders"
-          >
-            <Bell size={16} className={activeRemindersCount > 0 ? "animate-swing" : ""} />
-            {activeRemindersCount > 0 && (
-              <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white ring-2 ring-primary">
-                {activeRemindersCount}
-              </span>
-            )}
-          </button>
+
 
           <div className="text-right text-sm">
             <div className="text-white/60 text-xs">Today</div>
