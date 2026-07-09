@@ -186,3 +186,17 @@
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;
   letter-spacing: -0.03em !important;
 }
+
+@keyframes swing {
+  0%, 100% { transform: rotate(0deg); }
+  20% { transform: rotate(15deg); }
+  40% { transform: rotate(-15deg); }
+  60% { transform: rotate(10deg); }
+  80% { transform: rotate(-10deg); }
+}
+
+.animate-swing {
+  animation: swing 1.5s ease-in-out infinite;
+  transform-origin: top center;
+}
+

@@ -4,7 +4,7 @@ import {
   Plus, Trash2, TrendingUp, TrendingDown, BarChart3, Building2,
   CreditCard, ChevronRight, X, Edit3, LayoutDashboard, ArrowUpRight,
   ArrowDownRight, Wallet, Activity, FileText, Image,
-  Download, Upload, FileDown, Check, LogOut, Menu, ArrowLeftRight
+  Download, Upload, FileDown, Check, LogOut, Menu, ArrowLeftRight, Bell
 } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -551,6 +551,24 @@ function Dashboard({
     .sort((a, b) => b.date.localeCompare(a.date))
     .slice(0, 8);
 
+  const reminders = useMemo(() => {
+    return accounts
+      .flatMap(a => {
+        const idx = accounts.findIndex(acc => acc.id === a.id);
+        const color = CHART_COLORS[idx % CHART_COLORS.length];
+        return a.transactions
+          .filter((tx: any) => tx.dueDate)
+          .map((tx: any) => ({
+            ...tx,
+            accountId: a.id,
+            accountName: a.name,
+            accountColor: color,
+            accountBg: a.bgColor
+          }));
+      })
+      .sort((a, b) => a.dueDate.localeCompare(b.dueDate));
+  }, [accounts]);
+
   const kpis = [
     {
       label: "Opening Balance",
@@ -615,6 +633,88 @@ function Dashboard({
           </div>
         ))}
       </div>
+
+      {/* Reminders section */}
+      {reminders.length > 0 && (
+        <div id="reminders-section" className="bg-white rounded-2xl border border-red-100 overflow-hidden shadow-sm">
+          <div className="px-6 py-4 border-b border-red-100/60 flex items-center justify-between bg-red-50/30">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-red-100/80 flex items-center justify-center text-red-600 animate-pulse">
+                <Bell size={16} />
+              </div>
+              <div>
+                <h3 className="font-bold text-sm text-foreground flex items-center gap-2">
+                  Payment Reminders & Due Dates
+                </h3>
+                <p className="text-[10px] text-muted-foreground">List of upcoming and overdue payments across all accounts</p>
+              </div>
+            </div>
+            <span className="text-xs font-semibold text-red-700 bg-red-100/60 px-2 py-0.5 rounded-full">
+              {reminders.length} pending
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
+            {reminders.map((rem: any) => {
+              // Calculate status
+              const todayStr = new Date().toISOString().split('T')[0];
+              const isOverdue = rem.dueDate < todayStr;
+              const isDueToday = rem.dueDate === todayStr;
+              
+              // Calculate difference in days
+              const diffTime = new Date(rem.dueDate).getTime() - new Date(todayStr).getTime();
+              const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+              
+              let statusText = "";
+              let statusColorClass = "";
+              if (isOverdue) {
+                statusText = `Overdue by ${Math.abs(diffDays)} day${Math.abs(diffDays) > 1 ? 's' : ''}`;
+                statusColorClass = "bg-rose-100 text-rose-800 border-rose-200";
+              } else if (isDueToday) {
+                statusText = "Due Today";
+                statusColorClass = "bg-amber-100 text-amber-800 border-amber-200 font-semibold";
+              } else {
+                statusText = `Due in ${diffDays} day${diffDays > 1 ? 's' : ''}`;
+                statusColorClass = "bg-blue-50 text-blue-700 border-blue-100";
+              }
+
+              return (
+                <div key={rem.id} className="p-4 rounded-xl border border-border bg-white flex flex-col justify-between hover:shadow-md transition-shadow relative">
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full border ${statusColorClass}`}>
+                        {statusText}
+                      </span>
+                      <span className="text-[10px] text-muted-foreground font-mono">
+                        {rem.dueDate.split("-").reverse().join("/")}
+                      </span>
+                    </div>
+                    <div className="text-xs font-bold text-foreground line-clamp-1 mb-1" title={rem.description}>
+                      {rem.description}
+                    </div>
+                    <div className="flex items-center gap-1.5 flex-wrap mt-2">
+                      <span className="text-[9px] px-1.5 py-0.5 rounded text-white" style={{ backgroundColor: rem.accountColor }}>
+                        {rem.accountName}
+                      </span>
+                      {rem.reference && (
+                        <span className="text-[9px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-mono">
+                          Ref: {rem.reference}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="mt-4 pt-3 border-t border-border/40 flex items-center justify-between">
+                    <span className="text-[10px] text-muted-foreground font-medium">Estimated Amount</span>
+                    <span className="text-sm font-mono font-bold text-slate-800">
+                      ₹{rem.amount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Company Balances */}
       <div className="space-y-3">
@@ -1029,8 +1129,36 @@ export default function App() {
     saveOpeningBalance: handleSaveBal, 
     addAccount: handleAddAccount, 
     editAccountName,
-    deleteAccount: handleDeleteAccount 
+    deleteAccount: handleDeleteAccount,
   } = useAccountsController(isAuthenticated);
+
+  const reminders = useMemo(() => {
+    return accounts
+      .flatMap(a => {
+        const idx = accounts.findIndex(acc => acc.id === a.id);
+        const color = CHART_COLORS[idx % CHART_COLORS.length];
+        return a.transactions
+          .filter((tx: any) => tx.dueDate)
+          .map((tx: any) => ({
+            ...tx,
+            accountId: a.id,
+            accountName: a.name,
+            accountColor: color,
+            accountBg: a.bgColor
+          }));
+      })
+      .sort((a, b) => a.dueDate.localeCompare(b.dueDate));
+  }, [accounts]);
+
+  const activeRemindersCount = useMemo(() => {
+    const todayStr = new Date().toISOString().split('T')[0];
+    return reminders.filter((r: any) => {
+      const diffTime = new Date(r.dueDate).getTime() - new Date(todayStr).getTime();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      return diffDays <= 3; // due in <= 3 days (or overdue)
+    }).length;
+  }, [reminders]);
+
   const [activeTab, setActiveTab] = useState<string>("dashboard");
   const [showForm, setShowForm] = useState(false);
   const [showAddCompany, setShowAddCompany] = useState(false);
@@ -1054,6 +1182,7 @@ export default function App() {
     amount: "",
     reference: "",
     document: null as AttachedDoc | null,
+    dueDate: "",
   });
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -1124,13 +1253,14 @@ export default function App() {
   };
 
   const handleDeleteCompany = async () => {
-    if (!deleteAccountId) return;
+    const accountId = deleteAccountId;
+    if (!accountId) return;
     if (!deleteConfirmPassword.trim()) {
       setDeleteError("Password is required");
       return;
     }
 
-    const res = await handleDeleteAccount(deleteAccountId, deleteConfirmPassword);
+    const res = await handleDeleteAccount(accountId, deleteConfirmPassword);
     if (res?.success) {
       setShowDeleteDialog(false);
       setDeleteConfirmPassword("");
@@ -1151,9 +1281,10 @@ export default function App() {
       amount: parseFloat(form.amount),
       reference: form.reference || undefined,
       document: form.document || undefined,
+      dueDate: form.dueDate || undefined,
     };
     handleAddTx(activeTab, tx);
-    setForm({ date: today, description: "", type: "credit", amount: "", reference: "", document: null });
+    setForm({ date: today, description: "", type: "credit", amount: "", reference: "", document: null, dueDate: "" });
     setShowForm(false);
   };
 
@@ -1287,6 +1418,25 @@ export default function App() {
             <span className="hidden sm:inline">Monthly Report</span>
             <span className="sm:hidden">Report</span>
           </button>
+          
+          <button
+            onClick={() => {
+              setActiveTab("dashboard");
+              setTimeout(() => {
+                document.getElementById("reminders-section")?.scrollIntoView({ behavior: 'smooth' });
+              }, 100);
+            }}
+            className="relative flex items-center justify-center p-2 rounded-lg bg-white/15 hover:bg-white/25 text-white transition-all"
+            title="Due Date Reminders"
+          >
+            <Bell size={16} className={activeRemindersCount > 0 ? "animate-swing" : ""} />
+            {activeRemindersCount > 0 && (
+              <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white ring-2 ring-primary">
+                {activeRemindersCount}
+              </span>
+            )}
+          </button>
+
           <div className="text-right text-sm">
             <div className="text-white/60 text-xs">Today</div>
             <div className="font-mono font-semibold">
@@ -2236,6 +2386,18 @@ export default function App() {
                   value={form.reference}
                   onChange={e => setForm(f => ({ ...f, reference: e.target.value }))}
                   placeholder="INV-001, PO-012..."
+                  className="w-full border border-border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30 bg-input-background"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide block mb-1.5">
+                  Due Date <span className="font-normal text-muted-foreground/60">(optional for reminders)</span>
+                </label>
+                <input
+                  type="date"
+                  value={form.dueDate || ""}
+                  onChange={e => setForm(f => ({ ...f, dueDate: e.target.value }))}
                   className="w-full border border-border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30 bg-input-background"
                 />
               </div>
