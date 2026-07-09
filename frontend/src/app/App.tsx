@@ -471,33 +471,27 @@ function Dashboard({
   onNavigate: (id: string) => void;
   onAddTransaction: (accountId: string, transaction: any) => void;
 }) {
-  const [showSalaryModal, setShowSalaryModal] = useState(false);
-  const [salaryAccountId, setSalaryAccountId] = useState(accounts[0]?.id || "");
-  const [salaryAmount, setSalaryAmount] = useState("");
-  const [salaryDate, setSalaryDate] = useState("");
-  const [salaryDescription, setSalaryDescription] = useState("Salary Payment");
+  const [showReminderModal, setShowReminderModal] = useState(false);
+  const [reminderNote, setReminderNote] = useState("");
+  const [reminderDate, setReminderDate] = useState("");
 
-  // Keep salaryAccountId in sync with accounts if initially empty
-  useEffect(() => {
-    if (accounts.length > 0 && !salaryAccountId) {
-      setSalaryAccountId(accounts[0].id);
+  const saveReminder = () => {
+    if (accounts.length === 0) {
+      alert("Please add a company first before setting a reminder!");
+      return;
     }
-  }, [accounts, salaryAccountId]);
-
-  const saveSalaryReminder = () => {
-    if (!salaryAccountId || !salaryAmount || !salaryDate) return;
+    if (!reminderNote || !reminderDate) return;
     const tx = {
       date: new Date().toISOString().split('T')[0],
-      description: salaryDescription || "Salary Payment",
+      description: reminderNote,
       type: "debit" as const,
-      amount: parseFloat(salaryAmount),
-      dueDate: salaryDate,
+      amount: 0,
+      dueDate: reminderDate,
     };
-    onAddTransaction(salaryAccountId, tx);
-    setSalaryAmount("");
-    setSalaryDate("");
-    setSalaryDescription("Salary Payment");
-    setShowSalaryModal(false);
+    onAddTransaction(accounts[0].id, tx);
+    setReminderNote("");
+    setReminderDate("");
+    setShowReminderModal(false);
   };
 
   const totalOpening = accounts.reduce((s, a) => s + a.openingBalance, 0);
@@ -670,12 +664,12 @@ function Dashboard({
               alert("Please add a company first before setting a reminder!");
               return;
             }
-            setShowSalaryModal(true);
+            setShowReminderModal(true);
           }}
           className="flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2.5 rounded-xl text-sm font-semibold shadow-sm transition-all hover:scale-[1.02] active:scale-[0.98]"
         >
           <Bell size={16} className="animate-swing" />
-          Set Salary Reminder
+          Set Reminder
         </button>
       </div>
 
@@ -795,12 +789,14 @@ function Dashboard({
                       )}
                     </div>
                   </div>
-                  <div className="mt-4 pt-3 border-t border-border/40 flex items-center justify-between">
-                    <span className="text-[10px] text-muted-foreground font-medium">Estimated Amount</span>
-                    <span className="text-sm font-mono font-bold text-slate-800">
-                      ₹{rem.amount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-                    </span>
-                  </div>
+                  {rem.amount > 0 && (
+                    <div className="mt-4 pt-3 border-t border-border/40 flex items-center justify-between">
+                      <span className="text-[10px] text-muted-foreground font-medium">Estimated Amount</span>
+                      <span className="text-sm font-mono font-bold text-slate-800">
+                        ₹{rem.amount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -1096,7 +1092,7 @@ function Dashboard({
         </div>
       </div>
       {/* Set Salary Reminder Modal */}
-      {showSalaryModal && (
+      {showReminderModal && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden border border-border">
             <div className="px-6 py-4 border-b border-border flex items-center justify-between bg-red-50/20">
@@ -1104,10 +1100,10 @@ function Dashboard({
                 <div className="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center text-red-600">
                   <Bell size={16} />
                 </div>
-                <h3 className="font-bold text-base text-foreground">Set Salary Reminder</h3>
+                <h3 className="font-bold text-base text-foreground">Set Reminder</h3>
               </div>
               <button 
-                onClick={() => setShowSalaryModal(false)} 
+                onClick={() => setShowReminderModal(false)} 
                 className="text-muted-foreground hover:bg-gray-100 p-1.5 rounded-lg transition-colors"
               >
                 <X size={18} />
@@ -1117,81 +1113,44 @@ function Dashboard({
             <div className="p-6 space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">
-                  Select Company / Account
+                  Reminder Note
                 </label>
-                <select
-                  value={salaryAccountId}
-                  onChange={e => setSalaryAccountId(e.target.value)}
-                  className="w-full border border-border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20 bg-gray-50 text-foreground"
-                >
-                  {accounts.map(acc => (
-                    <option key={acc.id} value={acc.id}>
-                      {acc.name} ({acc.type === "company" ? "Company" : "Overdraft"})
-                    </option>
-                  ))}
-                </select>
+                <textarea
+                  value={reminderNote}
+                  onChange={e => setReminderNote(e.target.value)}
+                  placeholder="Enter reminder note..."
+                  rows={3}
+                  className="w-full border border-border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20 bg-gray-50 text-foreground resize-none"
+                />
               </div>
 
               <div>
                 <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">
-                  Reminder Title / Description
+                  Reminder Date
                 </label>
                 <input
-                  type="text"
-                  value={salaryDescription}
-                  onChange={e => setSalaryDescription(e.target.value)}
-                  placeholder="e.g. Monthly Staff Salary, Staff Wages..."
-                  className="w-full border border-border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20 bg-gray-50 text-foreground"
+                  type="date"
+                  value={reminderDate}
+                  onChange={e => setReminderDate(e.target.value)}
+                  required
+                  className="w-full border border-border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20 bg-gray-50 font-mono text-foreground"
                 />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">
-                    Salary Date (Due)
-                  </label>
-                  <input
-                    type="date"
-                    value={salaryDate}
-                    onChange={e => setSalaryDate(e.target.value)}
-                    required
-                    className="w-full border border-border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20 bg-gray-50 font-mono text-foreground"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">
-                    Amount (₹)
-                  </label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-semibold text-sm">₹</span>
-                    <input
-                      type="number"
-                      value={salaryAmount}
-                      onChange={e => setSalaryAmount(e.target.value)}
-                      placeholder="0.00"
-                      required
-                      min="0"
-                      step="0.01"
-                      className="w-full border border-border rounded-lg pl-7 pr-3 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-red-500/20 bg-gray-50 text-foreground"
-                    />
-                  </div>
-                </div>
               </div>
             </div>
 
             <div className="px-6 py-4 bg-gray-50 border-t border-border flex justify-end gap-3">
               <button 
-                onClick={() => setShowSalaryModal(false)} 
+                onClick={() => setShowReminderModal(false)} 
                 className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
               >
                 Cancel
               </button>
               <button 
-                onClick={saveSalaryReminder}
-                disabled={!salaryAccountId || !salaryAmount || !salaryDate}
+                onClick={saveReminder}
+                disabled={!reminderNote || !reminderDate}
                 className="px-4 py-2 text-sm font-semibold bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
               >
-                Save Salary Reminder
+                Save Reminder
               </button>
             </div>
           </div>
