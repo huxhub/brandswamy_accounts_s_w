@@ -675,32 +675,53 @@ function Dashboard({
 
       {/* Top Alert Banner for Due Today & Overdue Reminders */}
       {dueOrOverdueReminders.length > 0 && (
-        <div className="bg-gradient-to-r from-red-600 to-rose-700 rounded-2xl p-4 text-white shadow-md flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-pulse">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center text-white flex-shrink-0">
-              <Bell size={20} className="animate-swing" />
+        <div className="bg-red-50 border border-red-200 rounded-2xl p-5 text-foreground shadow-sm flex flex-col gap-3">
+          <div className="flex items-start gap-3">
+            <div className="w-9 h-9 rounded-xl bg-red-100 flex items-center justify-center text-red-600 flex-shrink-0 mt-0.5">
+              <Bell size={18} />
             </div>
-            <div>
-              <h4 className="font-bold text-sm">
-                {overdueCount > 0 ? "Overdue / Due Today Reminders Alert!" : "Salary & Payment Reminders Due Today!"}
-              </h4>
-              <p className="text-xs text-white/95 mt-0.5">
-                {overdueCount > 0 ? (
-                  `You have ${overdueCount} overdue payment(s) and ${dueTodayCount} due today.`
-                ) : (
-                  `You have ${dueTodayCount} reminder(s) scheduled for today.`
-                )}
+            <div className="flex-1">
+              <h4 className="font-bold text-sm text-red-800">Reminder Notes</h4>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                The following reminders have hit their scheduled date:
               </p>
+              
+              <div className="mt-3 space-y-2.5">
+                {dueOrOverdueReminders.map((rem: any) => {
+                  const todayStr = new Date().toISOString().split('T')[0];
+                  const isOverdue = rem.dueDate < todayStr;
+                  
+                  // Calculate difference in days
+                  const diffTime = new Date(rem.dueDate).getTime() - new Date(todayStr).getTime();
+                  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                  
+                  let statusText = "";
+                  let statusColorClass = "";
+                  if (isOverdue) {
+                    statusText = `Overdue by ${Math.abs(diffDays)} day${Math.abs(diffDays) > 1 ? 's' : ''}`;
+                    statusColorClass = "bg-rose-100 text-rose-800 border-rose-200";
+                  } else {
+                    statusText = "Due Today";
+                    statusColorClass = "bg-amber-100 text-amber-800 border-amber-200 font-semibold";
+                  }
+                  
+                  return (
+                    <div key={rem.id} className="flex items-start justify-between gap-3 p-3 bg-white rounded-xl border border-red-100/80 shadow-2xs">
+                      <div className="space-y-1">
+                        <div className="text-xs font-bold text-gray-800">{rem.description}</div>
+                        <div className="text-[10px] text-muted-foreground font-mono">
+                          Date: {rem.dueDate.split("-").reverse().join("/")}
+                        </div>
+                      </div>
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full border ${statusColorClass} flex-shrink-0`}>
+                        {statusText}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
-          <button
-            onClick={() => {
-              document.getElementById("reminders-section")?.scrollIntoView({ behavior: 'smooth' });
-            }}
-            className="bg-white text-red-700 hover:bg-red-50 px-4 py-2 rounded-xl text-xs font-bold transition-all self-start sm:self-center shadow-sm"
-          >
-            View Reminders
-          </button>
         </div>
       )}
 
@@ -720,89 +741,7 @@ function Dashboard({
         ))}
       </div>
 
-      {/* Reminders section */}
-      {reminders.length > 0 && (
-        <div id="reminders-section" className="bg-white rounded-2xl border border-red-100 overflow-hidden shadow-sm">
-          <div className="px-6 py-4 border-b border-red-100/60 flex items-center justify-between bg-red-50/30">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-red-100/80 flex items-center justify-center text-red-600 animate-pulse">
-                <Bell size={16} />
-              </div>
-              <div>
-                <h3 className="font-bold text-sm text-foreground flex items-center gap-2">
-                  Payment Reminders & Due Dates
-                </h3>
-                <p className="text-[10px] text-muted-foreground">List of upcoming and overdue payments across all accounts</p>
-              </div>
-            </div>
-            <span className="text-xs font-semibold text-red-700 bg-red-100/60 px-2 py-0.5 rounded-full">
-              {reminders.length} pending
-            </span>
-          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
-            {reminders.map((rem: any) => {
-              // Calculate status
-              const todayStr = new Date().toISOString().split('T')[0];
-              const isOverdue = rem.dueDate < todayStr;
-              const isDueToday = rem.dueDate === todayStr;
-              
-              // Calculate difference in days
-              const diffTime = new Date(rem.dueDate).getTime() - new Date(todayStr).getTime();
-              const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-              
-              let statusText = "";
-              let statusColorClass = "";
-              if (isOverdue) {
-                statusText = `Overdue by ${Math.abs(diffDays)} day${Math.abs(diffDays) > 1 ? 's' : ''}`;
-                statusColorClass = "bg-rose-100 text-rose-800 border-rose-200";
-              } else if (isDueToday) {
-                statusText = "Due Today";
-                statusColorClass = "bg-amber-100 text-amber-800 border-amber-200 font-semibold";
-              } else {
-                statusText = `Due in ${diffDays} day${diffDays > 1 ? 's' : ''}`;
-                statusColorClass = "bg-blue-50 text-blue-700 border-blue-100";
-              }
-
-              return (
-                <div key={rem.id} className="p-4 rounded-xl border border-border bg-white flex flex-col justify-between hover:shadow-md transition-shadow relative">
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className={`text-[10px] px-2 py-0.5 rounded-full border ${statusColorClass}`}>
-                        {statusText}
-                      </span>
-                      <span className="text-[10px] text-muted-foreground font-mono">
-                        {rem.dueDate.split("-").reverse().join("/")}
-                      </span>
-                    </div>
-                    <div className="text-xs font-bold text-foreground line-clamp-1 mb-1" title={rem.description}>
-                      {rem.description}
-                    </div>
-                    <div className="flex items-center gap-1.5 flex-wrap mt-2">
-                      <span className="text-[9px] px-1.5 py-0.5 rounded text-white" style={{ backgroundColor: rem.accountColor }}>
-                        {rem.accountName}
-                      </span>
-                      {rem.reference && (
-                        <span className="text-[9px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-mono">
-                          Ref: {rem.reference}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  {rem.amount > 0 && (
-                    <div className="mt-4 pt-3 border-t border-border/40 flex items-center justify-between">
-                      <span className="text-[10px] text-muted-foreground font-medium">Estimated Amount</span>
-                      <span className="text-sm font-mono font-bold text-slate-800">
-                        ₹{rem.amount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
 
       {/* Company Balances */}
       <div className="space-y-3">
