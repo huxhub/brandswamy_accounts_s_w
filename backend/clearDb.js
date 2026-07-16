@@ -1,18 +1,15 @@
-import mongoose from 'mongoose';
-import dotenv from 'dotenv';
+import './config/env.js';
+import connectDB from './config/db.js';
 import Account from './models/Account.js';
 import Transaction from './models/Transaction.js';
 
-dotenv.config();
-
 const clearDB = async () => {
   try {
-    await mongoose.connect(process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/accounts_management');
-    console.log('Connected to MongoDB');
-    await Account.deleteMany({});
-    await Transaction.deleteMany({});
+    await connectDB();
+    await Transaction.destroy({ where: {}, truncate: true });
+    await Account.destroy({ where: {}, truncate: true });
     console.log('All accounts and transactions have been successfully removed from the database!');
-    
+
     process.exit(0);
   } catch (error) {
     console.error('Error clearing database:', error.message);

@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 import { accountService } from '../services/api';
+import { getErrorMessage } from '../services/errors';
 
 export const useAccountsController = (isAuthenticated: boolean) => {
   const [accounts, setAccounts] = useState<any[]>([]);
@@ -11,7 +13,7 @@ export const useAccountsController = (isAuthenticated: boolean) => {
       const data = await accountService.getAccounts();
       setAccounts(data);
     } catch (error) {
-      console.error("Failed to fetch accounts", error);
+      toast.error(getErrorMessage(error, 'Failed to load accounts.'));
     } finally {
       setLoading(false);
     }
@@ -25,35 +27,47 @@ export const useAccountsController = (isAuthenticated: boolean) => {
     }
   }, [isAuthenticated]);
 
-  const addTransaction = async (accountId: string, transaction: any) => {
+  const addTransaction = async (accountId: string, transaction: any, options?: { silent?: boolean }) => {
     try {
       const newTx = await accountService.addTransaction(accountId, transaction);
       setAccounts(prev => prev.map(a =>
-        a.id === accountId ? { ...a, transactions: [...a.transactions, newTx] } : a
+        String(a.id) === String(accountId) ? { ...a, transactions: [...a.transactions, newTx] } : a
       ));
+      if (!options?.silent) toast.success('Transaction added');
+      return newTx;
     } catch (error) {
-      console.error("Failed to add transaction", error);
+      toast.error(getErrorMessage(error, 'Failed to add transaction.'));
+      return null;
     }
   };
 
-  const deleteTransaction = async (accountId: string, txId: string) => {
+  const deleteTransaction = async (accountId: string, txId: string, options?: { silent?: boolean }) => {
     try {
       await accountService.deleteTransaction(accountId, txId);
       setAccounts(prev => prev.map(a =>
-        a.id === accountId ? { ...a, transactions: a.transactions.filter((t: any) => t.id !== txId) } : a
+        String(a.id) === String(accountId) ? { ...a, transactions: a.transactions.filter((t: any) => String(t.id) !== String(txId)) } : a
       ));
+      if (!options?.silent) toast.success('Transaction removed');
+      return true;
     } catch (error) {
-      console.error("Failed to delete transaction", error);
+      if (!options?.silent) toast.error(getErrorMessage(error, 'Failed to delete transaction.'));
+      return false;
     }
   };
 
   const saveOpeningBalance = async (accountId: string, value: number) => {
+    if (isNaN(value)) {
+      toast.warning('Enter a valid opening balance.');
+      return false;
+    }
     try {
-      if (isNaN(value)) return;
       await accountService.updateOpeningBalance(accountId, value);
-      setAccounts(prev => prev.map(a => a.id === accountId ? { ...a, openingBalance: value } : a));
+      setAccounts(prev => prev.map(a => String(a.id) === String(accountId) ? { ...a, openingBalance: value } : a));
+      toast.success('Opening balance updated');
+      return true;
     } catch (error) {
-      console.error("Failed to update opening balance", error);
+      toast.error(getErrorMessage(error, 'Failed to update opening balance.'));
+      return false;
     }
   };
 
@@ -61,30 +75,39 @@ export const useAccountsController = (isAuthenticated: boolean) => {
     try {
       const newAccount = await accountService.createAccount(accountData);
       setAccounts(prev => [...prev, newAccount]);
+      toast.success(`${newAccount.name} added`);
       return newAccount.id;
     } catch (error) {
-      console.error("Failed to add account", error);
+      toast.error(getErrorMessage(error, 'Failed to add account.'));
+      return null;
     }
   };
 
   const editAccountName = async (accountId: string, newName: string) => {
+    if (!newName.trim()) {
+      toast.warning('Account name cannot be empty.');
+      return false;
+    }
     try {
-      if (!newName.trim()) return;
       await accountService.updateAccountName(accountId, newName);
-      setAccounts(prev => prev.map(a => a.id === accountId ? { ...a, name: newName } : a));
+      setAccounts(prev => prev.map(a => String(a.id) === String(accountId) ? { ...a, name: newName } : a));
+      toast.success('Account renamed');
+      return true;
     } catch (error) {
-      console.error("Failed to update account name", error);
+      toast.error(getErrorMessage(error, 'Failed to update account name.'));
+      return false;
     }
   };
 
   const deleteAccount = async (accountId: string, password: string) => {
     try {
-      const res = await accountService.deleteAccount(accountId, password);
-      setAccounts(prev => prev.filter(a => a.id !== accountId));
+      await accountService.deleteAccount(accountId, password);
+      setAccounts(prev => prev.filter(a => String(a.id) !== String(accountId)));
+      toast.success('Account deleted');
       return { success: true };
-    } catch (error: any) {
-      console.error("Failed to delete account", error);
-      return { success: false, message: error.message || "Failed to delete account" };
+    } catch (error) {
+      // No toast here — the delete-confirmation dialog surfaces this message inline.
+      return { success: false, message: getErrorMessage(error, 'Failed to delete account.') };
     }
   };
 

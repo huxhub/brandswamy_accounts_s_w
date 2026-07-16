@@ -1,15 +1,13 @@
-import mongoose from 'mongoose';
-import dotenv from 'dotenv';
+import './config/env.js';
+import connectDB from './config/db.js';
 import User from './models/User.js';
-
-dotenv.config();
 
 const seedUser = async () => {
   try {
-    await mongoose.connect(process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/accounts_management');
-    
+    await connectDB();
+
     // Seed admin user
-    const adminExists = await User.findOne({ username: 'admin' });
+    const adminExists = await User.findOne({ where: { username: 'admin' } });
     if (!adminExists) {
       const adminUser = await User.create({
         username: 'admin',
@@ -19,9 +17,9 @@ const seedUser = async () => {
     } else {
       console.log('Admin user already exists!');
     }
-    
+
     // Seed owner@demo.test user
-    const ownerExists = await User.findOne({ username: 'owner@demo.test' });
+    const ownerExists = await User.findOne({ where: { username: 'owner@demo.test' } });
     if (!ownerExists) {
       const ownerUser = await User.create({
         username: 'owner@demo.test',
@@ -31,7 +29,7 @@ const seedUser = async () => {
     } else {
       console.log('Owner user already exists!');
     }
-    
+
     process.exit();
   } catch (error) {
     console.error(`Error: ${error.message}`);

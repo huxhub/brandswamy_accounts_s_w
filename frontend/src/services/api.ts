@@ -1,101 +1,60 @@
 import { authService } from './authService';
+import { API_BASE_URL } from './config';
 
-const API_URL = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-  ? 'http://localhost:5002/api/accounts'
-  : 'https://brandswamy.onrender.com/api/accounts';
+const API_URL = `${API_BASE_URL}/api/accounts`;
 
-const getAuthHeaders = (): Record<string, string> => {
-  const user = authService.getCurrentUser();
-  if (user && user.token) {
-    return {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${user.token}`,
-    };
+const JSON_HEADERS: Record<string, string> = { 'Content-Type': 'application/json' };
+
+async function request<T = any>(path: string, options: RequestInit = {}): Promise<T> {
+  let response: Response;
+  try {
+    response = await fetch(`${API_URL}${path}`, {
+      credentials: 'include',
+      headers: JSON_HEADERS,
+      ...options,
+    });
+  } catch {
+    throw new Error('Unable to reach the server. Check your connection and try again.');
   }
-  return { 'Content-Type': 'application/json' };
-};
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      authService.logout();
+      // Removed window.location.reload() to prevent infinite loops
+    }
+    let message = `Request failed (${response.status})`;
+    try {
+      const data = await response.json();
+      if (data?.message) message = data.message;
+    } catch {
+      // response body wasn't JSON — fall back to the generic status-based message
+    }
+    throw new Error(message);
+  }
+
+  return response.json();
+}
 
 export const accountService = {
-  getAccounts: async () => {
-    const response = await fetch(API_URL, { headers: getAuthHeaders() });
-    if (!response.ok) {
-      if (response.status === 401) {
-        authService.logout();
-        // Removed window.location.reload() to prevent infinite loops
-      }
-      throw new Error('Failed to fetch accounts');
-    }
-    return response.json();
-  },
+  getAccounts: () => request(''),
 
-  createAccount: async (accountData: any) => {
-    const response = await fetch(API_URL, {
-      method: 'POST',
-      headers: getAuthHeaders(),
-      body: JSON.stringify(accountData),
-    });
-    if (!response.ok) throw new Error('Failed to create account');
-    return response.json();
-  },
+  createAccount: (accountData: any) =>
+    request('', { method: 'POST', body: JSON.stringify(accountData) }),
 
-  updateAccountName: async (id: string, name: string) => {
-    const response = await fetch(`${API_URL}/${id}`, {
-      method: 'PUT',
-      headers: getAuthHeaders(),
-      body: JSON.stringify({ name }),
-    });
-    if (!response.ok) throw new Error('Failed to update account');
-    return response.json();
-  },
+  updateAccountName: (id: string, name: string) =>
+    request(`/${id}`, { method: 'PUT', body: JSON.stringify({ name }) }),
 
-  deleteAccount: async (id: string, password: string) => {
-    const response = await fetch(`${API_URL}/${id}`, {
-      method: 'DELETE',
-      headers: getAuthHeaders(),
-      body: JSON.stringify({ password }),
-    });
-    if (!response.ok) {
-      const data = await response.json();
-      throw new Error(data.message || 'Failed to delete account');
-    }
-    return response.json();
-  },
+  deleteAccount: (id: string, password: string) =>
+    request(`/${id}`, { method: 'DELETE', body: JSON.stringify({ password }) }),
 
-  seedAccounts: async () => {
-    const response = await fetch(`${API_URL}/seed`, {
-      method: 'POST',
-      headers: getAuthHeaders()
-    });
-    if (!response.ok) throw new Error('Failed to seed accounts');
-    return response.json();
-  },
+  seedAccounts: () => request('/seed', { method: 'POST' }),
 
-  updateOpeningBalance: async (id: string, openingBalance: number) => {
-    const response = await fetch(`${API_URL}/${id}/balance`, {
-      method: 'put',
-      headers: getAuthHeaders(),
-      body: JSON.stringify({ openingBalance }),
-    });
-    if (!response.ok) throw new Error('Failed to update balance');
-    return response.json();
-  },
+  updateOpeningBalance: (id: string, openingBalance: number) =>
+    request(`/${id}/balance`, { method: 'PUT', body: JSON.stringify({ openingBalance }) }),
 
-  addTransaction: async (accountId: string, transaction: any) => {
-    const response = await fetch(`${API_URL}/${accountId}/transactions`, {
-      method: 'POST',
-      headers: getAuthHeaders(),
-      body: JSON.stringify(transaction),
-    });
-    if (!response.ok) throw new Error('Failed to add transaction');
-    return response.json();
-  },
+  addTransaction: (accountId: string, transaction: any) =>
+    request(`/${accountId}/transactions`, { method: 'POST', body: JSON.stringify(transaction) }),
 
-  deleteTransaction: async (accountId: string, txId: string) => {
-    const response = await fetch(`${API_URL}/${accountId}/transactions/${txId}`, {
-      method: 'DELETE',
-      headers: getAuthHeaders()
-    });
-    if (!response.ok) throw new Error('Failed to delete transaction');
-    return response.json();
-  }
+  deleteTransaction: (accountId: string, txId: string) =>
+    request(`/${accountId}/transactions/${txId}`, { method: 'DELETE' }),
 };

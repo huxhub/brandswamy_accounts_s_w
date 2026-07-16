@@ -1,49 +1,59 @@
-import mongoose from 'mongoose';
+import { DataTypes, Model } from 'sequelize';
+import { sequelize } from '../config/db.js';
+import Account from './Account.js';
 
-const transactionSchema = new mongoose.Schema({
-  accountId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Account',
-    required: true
+class Transaction extends Model {}
+
+Transaction.init(
+  {
+    accountId: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      references: {
+        model: Account,
+        key: 'id',
+      },
+    },
+    companyName: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    date: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    description: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    type: {
+      type: DataTypes.ENUM('credit', 'debit'),
+      allowNull: false,
+    },
+    amount: {
+      type: DataTypes.DOUBLE,
+      allowNull: false,
+    },
+    reference: {
+      type: DataTypes.STRING,
+    },
+    dueDate: {
+      type: DataTypes.STRING,
+    },
+    exchangeType: {
+      type: DataTypes.STRING,
+    },
+    document: {
+      type: DataTypes.JSON,
+    },
   },
-  companyName: {
-    type: String,
-    required: true
-  },
-  date: {
-    type: String,
-    required: true
-  },
-  description: {
-    type: String,
-    required: true
-  },
-  type: {
-    type: String,
-    enum: ['credit', 'debit'],
-    required: true
-  },
-  amount: {
-    type: Number,
-    required: true
-  },
-  reference: {
-    type: String
-  },
-  dueDate: {
-    type: String
-  },
-  exchangeType: {
-    type: String
-  },
-  document: {
-    name: String,
-    dataUrl: String,
-    mimeType: String,
-    size: Number
+  {
+    sequelize,
+    modelName: 'Transaction',
   }
-}, { timestamps: true });
+);
 
-const Transaction = mongoose.model('Transaction', transactionSchema);
+Account.hasMany(Transaction, { foreignKey: 'accountId', onDelete: 'CASCADE' });
+Transaction.belongsTo(Account, { foreignKey: 'accountId' });
 
 export default Transaction;

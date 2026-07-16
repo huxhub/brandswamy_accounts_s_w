@@ -2,40 +2,38 @@ import Account from '../models/Account.js';
 import Transaction from '../models/Transaction.js';
 import User from '../models/User.js';
 
+const formatTransaction = (tx) => ({
+  id: tx.id,
+  companyName: tx.companyName,
+  date: tx.date,
+  description: tx.description,
+  type: tx.type,
+  amount: tx.amount,
+  reference: tx.reference,
+  document: tx.document,
+  dueDate: tx.dueDate,
+  exchangeType: tx.exchangeType,
+  createdAt: tx.createdAt,
+});
+
 // @desc    Get all accounts with their corresponding transactions
 // @route   GET /api/accounts
 export const getAccounts = async (req, res) => {
   try {
-    const accounts = await Account.find({});
-    const transactions = await Transaction.find({});
-
-    // Map _id to id for frontend compatibility and embed transactions
-    const formattedAccounts = accounts.map(acc => {
-      const accTxList = transactions.filter(tx => tx.accountId.toString() === acc._id.toString());
-      const formattedTxs = accTxList.map(tx => ({
-        id: tx._id,
-        companyName: tx.companyName,
-        date: tx.date,
-        description: tx.description,
-        type: tx.type,
-        amount: tx.amount,
-        reference: tx.reference,
-        document: tx.document,
-        dueDate: tx.dueDate,
-        exchangeType: tx.exchangeType,
-        createdAt: tx.createdAt
-      }));
-      return {
-        id: acc._id,
-        name: acc.name,
-        type: acc.type,
-        openingBalance: acc.openingBalance,
-        color: acc.color,
-        bgColor: acc.bgColor,
-        transactions: formattedTxs,
-        createdAt: acc.createdAt
-      };
+    const accounts = await Account.findAll({
+      include: [{ model: Transaction }],
     });
+
+    const formattedAccounts = accounts.map((acc) => ({
+      id: acc.id,
+      name: acc.name,
+      type: acc.type,
+      openingBalance: acc.openingBalance,
+      color: acc.color,
+      bgColor: acc.bgColor,
+      transactions: acc.Transactions.map(formatTransaction),
+      createdAt: acc.createdAt,
+    }));
     res.json(formattedAccounts);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -47,25 +45,24 @@ export const getAccounts = async (req, res) => {
 export const createAccount = async (req, res) => {
   try {
     const { name, type, color, bgColor, openingBalance } = req.body;
-    
-    const account = new Account({
+
+    const createdAccount = await Account.create({
       name: name || 'New Company',
       type: type || 'company',
       color: color || '#1e3a5f',
       bgColor: bgColor || '#e8edf5',
-      openingBalance: openingBalance || 0
+      openingBalance: openingBalance || 0,
     });
 
-    const createdAccount = await account.save();
     res.status(201).json({
-      id: createdAccount._id,
+      id: createdAccount.id,
       name: createdAccount.name,
       type: createdAccount.type,
       openingBalance: createdAccount.openingBalance,
       color: createdAccount.color,
       bgColor: createdAccount.bgColor,
       transactions: [],
-      createdAt: createdAccount.createdAt
+      createdAt: createdAccount.createdAt,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -77,11 +74,11 @@ export const createAccount = async (req, res) => {
 export const updateAccount = async (req, res) => {
   try {
     const { name } = req.body;
-    const account = await Account.findById(req.params.id);
+    const account = await Account.findByPk(req.params.id);
 
     if (account) {
       if (name) account.name = name;
-      
+
       const updatedAccount = await account.save();
       res.json(updatedAccount);
     } else {
@@ -97,7 +94,7 @@ export const updateAccount = async (req, res) => {
 export const updateOpeningBalance = async (req, res) => {
   try {
     const { openingBalance } = req.body;
-    const account = await Account.findById(req.params.id);
+    const account = await Account.findByPk(req.params.id);
 
     if (account) {
       account.openingBalance = openingBalance;
@@ -116,10 +113,10 @@ export const updateOpeningBalance = async (req, res) => {
 export const addTransaction = async (req, res) => {
   try {
     const { date, description, type, amount, reference, document, dueDate, exchangeType } = req.body;
-    const account = await Account.findById(req.params.id);
+    const account = await Account.findByPk(req.params.id);
 
     if (account) {
-      const transaction = new Transaction({
+      const transaction = await Transaction.create({
         accountId: req.params.id,
         companyName: account.name,
         date,
@@ -129,24 +126,10 @@ export const addTransaction = async (req, res) => {
         reference,
         document,
         dueDate,
-        exchangeType
+        exchangeType,
       });
 
-      await transaction.save();
-      
-      res.status(201).json({
-        id: transaction._id,
-        companyName: transaction.companyName,
-        date: transaction.date,
-        description: transaction.description,
-        type: transaction.type,
-        amount: transaction.amount,
-        reference: transaction.reference,
-        document: transaction.document,
-        dueDate: transaction.dueDate,
-        exchangeType: transaction.exchangeType,
-        createdAt: transaction.createdAt
-      });
+      res.status(201).json(formatTransaction(transaction));
     } else {
       res.status(404).json({ message: 'Account not found' });
     }
@@ -159,9 +142,10 @@ export const addTransaction = async (req, res) => {
 // @route   DELETE /api/accounts/:id/transactions/:txId
 export const deleteTransaction = async (req, res) => {
   try {
-    const transaction = await Transaction.findByIdAndDelete(req.params.txId);
+    const transaction = await Transaction.findByPk(req.params.txId);
 
     if (transaction) {
+      await transaction.destroy();
       res.json({ message: 'Transaction removed' });
     } else {
       res.status(404).json({ message: 'Transaction not found' });
@@ -175,7 +159,7 @@ export const deleteTransaction = async (req, res) => {
 // @route   POST /api/accounts/seed
 export const seedAccounts = async (req, res) => {
   try {
-    const count = await Account.countDocuments({});
+    const count = await Account.count();
     if (count === 0) {
       const initialAccounts = [
         { name: "Company 1", type: "company", color: "#1e3a5f", bgColor: "#e8edf5", openingBalance: 125000 },
@@ -184,7 +168,7 @@ export const seedAccounts = async (req, res) => {
         { name: "Company 4", type: "company", color: "#4c1d95", bgColor: "#ede9fe", openingBalance: 55000 },
         { name: "Overdraft Account", type: "overdraft", color: "#9f1239", bgColor: "#ffe4e6", openingBalance: -45000 }
       ];
-      await Account.insertMany(initialAccounts);
+      await Account.bulkCreate(initialAccounts);
       res.json({ message: 'Database seeded successfully' });
     } else {
       res.json({ message: 'Database already has data' });
@@ -198,8 +182,8 @@ export const seedAccounts = async (req, res) => {
 // @route   DELETE /api/accounts/clear
 export const clearAccounts = async (req, res) => {
   try {
-    await Account.deleteMany({});
-    await Transaction.deleteMany({});
+    await Transaction.destroy({ where: {}, truncate: true });
+    await Account.destroy({ where: {}, truncate: true });
     res.json({ message: 'All database records cleared successfully' });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -216,24 +200,23 @@ export const deleteAccount = async (req, res) => {
     }
 
     // Verify user's password
-    const user = await User.findById(req.user._id);
+    const user = await User.findByPk(req.user.id);
     if (!user || !(await user.matchPassword(password))) {
       return res.status(401).json({ message: 'Incorrect password' });
     }
 
-    const account = await Account.findById(req.params.id);
+    const account = await Account.findByPk(req.params.id);
     if (!account) {
       return res.status(404).json({ message: 'Account not found' });
     }
 
-    // Delete the account
-    await Account.findByIdAndDelete(req.params.id);
     // Delete all transactions associated with this account
-    await Transaction.deleteMany({ accountId: req.params.id });
+    await Transaction.destroy({ where: { accountId: req.params.id } });
+    // Delete the account
+    await account.destroy();
 
     res.json({ message: 'Account and associated transactions removed successfully' });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
-

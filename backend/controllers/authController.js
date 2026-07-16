@@ -1,6 +1,8 @@
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 
+const isProduction = process.env.NODE_ENV === 'production';
+
 // Generate JWT
 const generateToken = (id) => {
   if (!process.env.JWT_SECRET) {
@@ -8,6 +10,18 @@ const generateToken = (id) => {
   }
   return jwt.sign({ id }, process.env.JWT_SECRET, {
     expiresIn: '30d',
+  });
+};
+
+// Cross-site (e.g. Vercel frontend -> Render backend) requires SameSite=None + Secure;
+// localhost dev is not HTTPS, so it needs Lax + non-Secure instead.
+const setTokenCookie = (res, token) => {
+  res.cookie('token', token, {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: isProduction ? 'none' : 'lax',
+    maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+    path: '/',
   });
 };
 
@@ -22,7 +36,7 @@ export const registerUser = async (req, res) => {
     }
 
     // Check if user exists
-    const userExists = await User.findOne({ username });
+    const userExists = await User.findOne({ where: { username } });
 
     if (userExists) {
       return res.status(400).json({ message: 'User already exists' });
@@ -35,10 +49,10 @@ export const registerUser = async (req, res) => {
     });
 
     if (user) {
+      setTokenCookie(res, generateToken(user.id));
       res.status(201).json({
         _id: user.id,
         username: user.username,
-        token: generateToken(user._id),
       });
     } else {
       res.status(400).json({ message: 'Invalid user data' });
@@ -55,13 +69,13 @@ export const loginUser = async (req, res) => {
     const { username, password } = req.body;
 
     // Check for user email
-    const user = await User.findOne({ username });
+    const user = await User.findOne({ where: { username } });
 
     if (user && (await user.matchPassword(password))) {
+      setTokenCookie(res, generateToken(user.id));
       res.json({
         _id: user.id,
         username: user.username,
-        token: generateToken(user._id),
       });
     } else {
       res.status(401).json({ message: 'Invalid credentials' });
@@ -69,4 +83,25 @@ export const loginUser = async (req, res) => {
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
+};
+
+// @desc    Log out the current user
+// @route   POST /api/auth/logout
+export const logoutUser = (req, res) => {
+  res.clearCookie('token', {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: isProduction ? 'none' : 'lax',
+    path: '/',
+  });
+  res.json({ message: 'Logged out' });
+};
+
+// @desc    Get the currently authenticated user
+// @route   GET /api/auth/me
+export const getMe = (req, res) => {
+  res.json({
+    _id: req.user.id,
+    username: req.user.username,
+  });
 };

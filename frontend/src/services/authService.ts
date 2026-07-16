@@ -1,20 +1,17 @@
-const API_URL = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-  ? 'http://localhost:5002/api/auth'
-  : 'https://brandswamy.onrender.com/api/auth';
+import { API_BASE_URL } from './config';
+
+const API_URL = `${API_BASE_URL}/api/auth`;
 
 export const authService = {
   login: async (userData: any) => {
     const response = await fetch(`${API_URL}/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify(userData),
     });
     const data = await response.json();
     if (!response.ok) throw new Error(data.message || 'Failed to login');
-    
-    if (data.token) {
-      localStorage.setItem('user', JSON.stringify(data));
-    }
     return data;
   },
 
@@ -22,24 +19,38 @@ export const authService = {
     const response = await fetch(`${API_URL}/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify(userData),
     });
     const data = await response.json();
     if (!response.ok) throw new Error(data.message || 'Failed to register');
-    
-    if (data.token) {
-      localStorage.setItem('user', JSON.stringify(data));
-    }
     return data;
   },
 
-  logout: () => {
-    localStorage.removeItem('user');
+  logout: async () => {
+    try {
+      await fetch(`${API_URL}/logout`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+    } catch {
+      // Network error — cookie may still be present server-side, but there's
+      // nothing more the client can do; still let the UI drop to the login screen.
+    }
   },
 
-  getCurrentUser: () => {
-    const userStr = localStorage.getItem('user');
-    if (userStr) return JSON.parse(userStr);
-    return null;
+  // The auth cookie is httpOnly, so the client can't read it directly —
+  // this asks the server who (if anyone) it belongs to.
+  getCurrentUser: async () => {
+    try {
+      const response = await fetch(`${API_URL}/me`, {
+        credentials: 'include',
+      });
+      if (!response.ok) return null;
+      return response.json();
+    } catch {
+      // Network error (e.g. backend unreachable) — treat as logged out.
+      return null;
+    }
   }
 };

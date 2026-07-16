@@ -4,7 +4,7 @@ import {
   Plus, Trash2, TrendingUp, TrendingDown, BarChart3, Building2,
   CreditCard, ChevronRight, X, Edit3, LayoutDashboard, ArrowUpRight,
   ArrowDownRight, Wallet, Activity, FileText, Image,
-  Download, Upload, FileDown, Check, LogOut, Menu, ArrowLeftRight, Bell
+  Download, Upload, FileDown, Check, LogOut, Menu, ArrowLeftRight, Bell, Landmark
 } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -13,9 +13,11 @@ import {
   PieChart, Pie, Cell, Legend,
 } from "recharts";
 
+import { toast } from "sonner";
 import { authService } from "../services/authService";
 import Login from "./Login";
 import { Skeleton } from "./components/ui/skeleton";
+import { Toaster } from "./components/ui/sonner";
 
 type TransactionType = "credit" | "debit";
 
@@ -42,7 +44,7 @@ interface Transaction {
 interface Account {
   id: string;
   name: string;
-  type: "company" | "overdraft";
+  type: "company" | "overdraft" | "bank";
   openingBalance: number;
   transactions: Transaction[];
   color: string;
@@ -131,6 +133,22 @@ function fmt(n: number): string {
   const abs = Math.abs(n);
   const f = abs.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   return n < 0 ? `(${f})` : f;
+}
+// Account ids come back from the API as numbers, but every <select> element's
+// onChange hands back a string (e.target.value) — comparing them with === would
+// silently fail the moment a user changes a dropdown away from its default.
+function findAccountById(list: Account[], id: string): Account | undefined {
+  return list.find(a => String(a.id) === String(id));
+}
+function accountTypeIcon(type: Account["type"]) {
+  if (type === "overdraft") return CreditCard;
+  if (type === "bank") return Landmark;
+  return Building2;
+}
+function accountTypeLabel(type: Account["type"]): string {
+  if (type === "overdraft") return "Overdraft Account";
+  if (type === "bank") return "Bank Account";
+  return "Company Account";
 }
 function fmtSign(n: number): string {
   return n < 0
@@ -477,10 +495,13 @@ function Dashboard({
 
   const saveReminder = () => {
     if (accounts.length === 0) {
-      alert("Please add a company first before setting a reminder!");
+      toast.warning("Please add a company first before setting a reminder!");
       return;
     }
-    if (!reminderNote || !reminderDate) return;
+    if (!reminderNote || !reminderDate) {
+      toast.warning("Please fill in both the note and the date.");
+      return;
+    }
     const tx = {
       date: new Date().toISOString().split('T')[0],
       description: reminderNote,
@@ -661,7 +682,7 @@ function Dashboard({
         <button
           onClick={() => {
             if (accounts.length === 0) {
-              alert("Please add a company first before setting a reminder!");
+              toast.warning("Please add a company first before setting a reminder!");
               return;
             }
             setShowReminderModal(true);
@@ -773,11 +794,7 @@ function Dashboard({
               >
                 <div className="flex items-center justify-between">
                   <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: bgColor }}>
-                    {acc.type === "overdraft" ? (
-                      <CreditCard size={14} style={{ color: color }} />
-                    ) : (
-                      <Building2 size={14} style={{ color: color }} />
-                    )}
+                    {(() => { const Icon = accountTypeIcon(acc.type); return <Icon size={14} style={{ color: color }} />; })()}
                   </div>
                   <ChevronRight size={14} className="text-muted-foreground opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
                 </div>
@@ -945,16 +962,15 @@ function Dashboard({
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
                     <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: acc.bgColor }}>
-                      {acc.type === "overdraft" ? (
-                        <CreditCard size={14} style={{ color: acc.color }} />
-                      ) : (
-                        <Building2 size={14} style={{ color: acc.color }} />
-                      )}
+                      {(() => { const Icon = accountTypeIcon(acc.type); return <Icon size={14} style={{ color: acc.color }} />; })()}
                     </div>
                     <div>
                       <div className="text-xs font-semibold text-foreground">{acc.name}</div>
                       {acc.type === "overdraft" && (
                         <span className="text-[10px] text-red-500 font-medium">Overdraft</span>
+                      )}
+                      {acc.type === "bank" && (
+                        <span className="text-[10px] text-teal-600 font-medium">Bank</span>
                       )}
                     </div>
                   </div>
@@ -1224,7 +1240,15 @@ function AccountDetailsSkeleton() {
 
 // ─── Main App ──────────────────────────────────────────────────────────────────
 export default function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(!!authService.getCurrentUser());
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [authChecked, setAuthChecked] = useState(false);
+
+  useEffect(() => {
+    authService.getCurrentUser().then(user => {
+      setIsAuthenticated(!!user);
+      setAuthChecked(true);
+    });
+  }, []);
   const { 
     accounts, 
     loading, 
@@ -1293,8 +1317,14 @@ export default function App() {
   
   const [showExchange, setShowExchange] = useState(false);
   const [exchangeForm, setExchangeForm] = useState({
+    category: "company" as "company" | "bank" | "companyToBank",
+    // For "company"/"bank": the two accounts being transferred between.
+    // For "companyToBank": the two BANK accounts the money actually moves through —
+    // fromCompanyId/toCompanyId below are only used to label the transaction.
     sourceId: "",
     destId: "",
+    fromCompanyId: "",
+    toCompanyId: "",
     amount: "",
     date: today,
     dueDate: "",
@@ -1344,16 +1374,25 @@ export default function App() {
   }, [activeAccount]);
 
   const addCompany = async () => {
-    if (!companyForm.name) return;
+    if (!companyForm.name.trim()) {
+      toast.warning("Please enter a name.");
+      return;
+    }
+    const bgColor = companyForm.type === "overdraft" ? "#ffe4e6" : companyForm.type === "bank" ? "#ccfbf1" : "#e8edf5";
+    const color = companyForm.type === "overdraft" ? "#9f1239" : companyForm.type === "bank" ? "#0f766e" : "#1e3a5f";
     const newId = await handleAddAccount({
       ...companyForm,
       openingBalance: parseFloat(companyForm.openingBalance) || 0,
-      bgColor: companyForm.type === "overdraft" ? "#ffe4e6" : "#e8edf5",
-      color: companyForm.type === "overdraft" ? "#9f1239" : "#1e3a5f"
+      bgColor,
+      color
     });
-    setCompanyForm({ name: "", type: "company", openingBalance: "", color: "#1e3a5f" });
-    setShowAddCompany(false);
-    if (newId) setActiveTab(newId);
+    // Only reset/close on success — a failure keeps the form open (with the
+    // toast already shown by the controller) so the user can retry.
+    if (newId) {
+      setCompanyForm({ name: "", type: "company", openingBalance: "", color: "#1e3a5f" });
+      setShowAddCompany(false);
+      setActiveTab(newId);
+    }
   };
 
   const handleDeleteCompany = async () => {
@@ -1376,8 +1415,11 @@ export default function App() {
     }
   };
 
-  const addTransaction = () => {
-    if (!form.description || !form.amount) return;
+  const addTransaction = async () => {
+    if (!form.description || !form.amount) {
+      toast.warning("Please fill in a description and amount.");
+      return;
+    }
     const tx = {
       date: form.date,
       description: form.description,
@@ -1387,9 +1429,13 @@ export default function App() {
       document: form.document || undefined,
       dueDate: form.dueDate || undefined,
     };
-    handleAddTx(activeTab, tx);
-    setForm({ date: today, description: "", type: "credit", amount: "", reference: "", document: null, dueDate: "" });
-    setShowForm(false);
+    const result = await handleAddTx(activeTab, tx);
+    // Only reset/close on success — a failure keeps the form open (with the
+    // entered data intact) so the user can retry.
+    if (result) {
+      setForm({ date: today, description: "", type: "credit", amount: "", reference: "", document: null, dueDate: "" });
+      setShowForm(false);
+    }
   };
 
   const deleteTransaction = (txId: string) => {
@@ -1397,49 +1443,108 @@ export default function App() {
   };
 
   const handleExchangeSubmit = async () => {
-    if (!exchangeForm.sourceId || !exchangeForm.destId || !exchangeForm.amount) return;
-    
-    const sourceAcc = accounts.find(a => a.id === exchangeForm.sourceId);
-    const destAcc = accounts.find(a => a.id === exchangeForm.destId);
-    if (!sourceAcc || !destAcc) return;
-    
+    const isCompanyToBank = exchangeForm.category === "companyToBank";
+
+    if (!exchangeForm.sourceId || !exchangeForm.destId || !exchangeForm.amount) {
+      toast.warning(isCompanyToBank ? "Please select both bank accounts and an amount." : "Please select both accounts and an amount.");
+      return;
+    }
+    if (isCompanyToBank && (!exchangeForm.fromCompanyId || !exchangeForm.toCompanyId)) {
+      toast.warning("Please select both companies.");
+      return;
+    }
+
+    const sourceAcc = findAccountById(accounts, exchangeForm.sourceId);
+    const destAcc = findAccountById(accounts, exchangeForm.destId);
+    if (!sourceAcc || !destAcc) {
+      toast.error("Selected account could not be found.");
+      return;
+    }
+
+    const fromCompanyAcc = isCompanyToBank ? findAccountById(accounts, exchangeForm.fromCompanyId) : undefined;
+    const toCompanyAcc = isCompanyToBank ? findAccountById(accounts, exchangeForm.toCompanyId) : undefined;
+    if (isCompanyToBank && (!fromCompanyAcc || !toCompanyAcc)) {
+      toast.error("Selected company could not be found.");
+      return;
+    }
+
     const amt = parseFloat(exchangeForm.amount);
-    if (isNaN(amt) || amt <= 0) return;
-    
+    if (isNaN(amt) || amt <= 0) {
+      toast.warning("Enter a valid transfer amount.");
+      return;
+    }
+
     const ref = `EX-${Date.now().toString().slice(-6)}`;
     const userDescription = exchangeForm.description.trim() ? ` — ${exchangeForm.description.trim()}` : "";
-    
-    const sourceTx = {
+    const baseTx = {
       date: exchangeForm.date,
-      description: `Inter-Company Transfer to ${destAcc.name}${userDescription}`,
-      type: "debit" as const,
       amount: amt,
-      reference: ref,
       dueDate: exchangeForm.dueDate || undefined,
       exchangeType: exchangeForm.exchangeType,
     };
-    
-    const destTx = {
-      date: exchangeForm.date,
-      description: `Inter-Company Transfer from ${sourceAcc.name}${userDescription}`,
-      type: "credit" as const,
-      amount: amt,
-      reference: ref,
-      dueDate: exchangeForm.dueDate || undefined,
-      exchangeType: exchangeForm.exchangeType,
-    };
-    
-    await handleAddTx(exchangeForm.sourceId, sourceTx);
-    await handleAddTx(exchangeForm.destId, destTx);
-    
+
+    // Each entry is one leg of the transfer: which account it posts to, and
+    // its own debit/credit description. companyToBank posts four linked legs
+    // (both companies AND both banks) so every affected account's ledger —
+    // and opening/closing balance — reflects the same real-world payment.
+    // The Dashboard's transfer log and the PDF report group transactions by
+    // `reference`, assuming exactly one debit + one credit per reference — so
+    // the company pair and bank pair each need their own reference, or one
+    // pair would silently overwrite the other in those views.
+    const entries = isCompanyToBank
+      ? [
+          { accountId: exchangeForm.fromCompanyId, tx: { ...baseTx, reference: `${ref}-C`, type: "debit" as const, description: `Payment to ${toCompanyAcc!.name} (${sourceAcc.name} → ${destAcc.name})${userDescription}` } },
+          { accountId: exchangeForm.toCompanyId, tx: { ...baseTx, reference: `${ref}-C`, type: "credit" as const, description: `Payment from ${fromCompanyAcc!.name} (${sourceAcc.name} → ${destAcc.name})${userDescription}` } },
+          { accountId: exchangeForm.sourceId, tx: { ...baseTx, reference: `${ref}-B`, type: "debit" as const, description: `Payment to ${toCompanyAcc!.name} (${sourceAcc.name} → ${destAcc.name})${userDescription}` } },
+          { accountId: exchangeForm.destId, tx: { ...baseTx, reference: `${ref}-B`, type: "credit" as const, description: `Payment from ${fromCompanyAcc!.name} (${sourceAcc.name} → ${destAcc.name})${userDescription}` } },
+        ]
+      : (() => {
+          const label = exchangeForm.category === "bank" ? "Inter-Bank Transfer" : "Inter-Company Transfer";
+          return [
+            { accountId: exchangeForm.sourceId, tx: { ...baseTx, reference: ref, type: "debit" as const, description: `${label} to ${destAcc.name}${userDescription}` } },
+            { accountId: exchangeForm.destId, tx: { ...baseTx, reference: ref, type: "credit" as const, description: `${label} from ${sourceAcc.name}${userDescription}` } },
+          ];
+        })();
+
+    // Post each leg in order; if any leg fails, roll back everything already
+    // posted (in reverse) rather than leaving a partially-completed transfer.
+    const posted: { accountId: string; txId: string }[] = [];
+    for (const entry of entries) {
+      const result = await handleAddTx(entry.accountId, entry.tx, { silent: true });
+      if (!result) {
+        let allRolledBack = true;
+        for (const p of [...posted].reverse()) {
+          const rolledBack = await handleDelTx(p.accountId, p.txId, { silent: true });
+          if (!rolledBack) allRolledBack = false;
+        }
+        toast.error(
+          allRolledBack
+            ? "Transfer failed — the entries already posted were rolled back."
+            : "Transfer failed, and not all entries could be rolled back automatically. Please check the ledger."
+        );
+        return;
+      }
+      posted.push({ accountId: entry.accountId, txId: result.id });
+    }
+
+    toast.success(
+      isCompanyToBank
+        ? `Payment of ₹${amt.toLocaleString("en-IN")} from ${fromCompanyAcc!.name} to ${toCompanyAcc!.name} completed`
+        : `Transfer of ₹${amt.toLocaleString("en-IN")} completed`
+    );
     setShowExchange(false);
   };
 
-  const saveOpeningBalance = (accountId: string) => {
+  const saveOpeningBalance = async (accountId: string) => {
     const val = parseFloat(openingInput);
-    if (isNaN(val)) return;
-    handleSaveBal(accountId, val);
-    setEditingOpening(null);
+    if (isNaN(val)) {
+      toast.warning("Enter a valid opening balance.");
+      return;
+    }
+    const success = await handleSaveBal(accountId, val);
+    // Only exit edit mode on success — a failure leaves the input open (with
+    // the entered value) so the user can retry.
+    if (success) setEditingOpening(null);
   };
 
   const totalDailyCredit = accounts.reduce((s, a) => s + calcTotalCredit(a), 0);
@@ -1447,17 +1552,34 @@ export default function App() {
   const totalNetBalance = accounts.reduce((s, a) => s + calcBalance(a), 0);
   const totalOpeningBalance = accounts.reduce((s, a) => s + a.openingBalance, 0);
 
-  const handleLogout = () => {
-    authService.logout();
+  const handleLogout = async () => {
+    await authService.logout();
     setIsAuthenticated(false);
   };
 
+  if (!authChecked) {
+    return (
+      <>
+        <Toaster richColors position="top-right" closeButton />
+        <div className="w-screen h-screen flex items-center justify-center bg-background">
+          <div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+        </div>
+      </>
+    );
+  }
+
   if (!isAuthenticated) {
-    return <Login onLogin={() => setIsAuthenticated(true)} />;
+    return (
+      <>
+        <Toaster richColors position="top-right" closeButton />
+        <Login onLogin={() => setIsAuthenticated(true)} />
+      </>
+    );
   }
 
   return (
     <div className="w-screen h-screen flex flex-col bg-background" style={{ fontFamily: "'Inter', sans-serif" }}>
+      <Toaster richColors position="top-right" closeButton />
       {/* Header */}
       <header className="bg-primary text-primary-foreground px-4 sm:px-6 py-4 flex flex-wrap sm:flex-nowrap items-center justify-between shadow-lg flex-shrink-0 gap-3">
         <div className="flex items-center gap-2 sm:gap-3">
@@ -1497,9 +1619,13 @@ export default function App() {
         <div className="flex items-center justify-between w-full sm:w-auto gap-3">
           <button
             onClick={() => {
+              const companyAccs = accounts.filter(a => a.type === "company");
               setExchangeForm({
-                sourceId: accounts[0]?.id || "",
-                destId: accounts[1]?.id || "",
+                category: "company",
+                sourceId: companyAccs[0]?.id || "",
+                destId: companyAccs[1]?.id || "",
+                fromCompanyId: "",
+                toCompanyId: "",
                 amount: "",
                 date: today,
                 dueDate: "",
@@ -1561,7 +1687,7 @@ export default function App() {
             </button>
           </div>
 
-          <div className="px-4 py-2 border-b border-border flex items-center justify-between">
+          <div className="px-4 py-2 border-y border-border flex items-center justify-between bg-gray-100">
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest py-1">Companies</p>
             <button 
               onClick={() => {
@@ -1616,7 +1742,62 @@ export default function App() {
             )}
           </nav>
 
-          <div className="px-4 py-2 border-y border-border flex items-center justify-between bg-gray-50/50">
+          <div className="px-4 py-2 border-y border-border flex items-center justify-between bg-gray-100">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest py-1">Banks</p>
+            <button
+              onClick={() => {
+                setCompanyForm({ name: "", type: "bank", openingBalance: "", color: "#0f766e" });
+                setShowAddCompany(true);
+              }}
+              className="w-5 h-5 flex items-center justify-center rounded hover:bg-gray-200 text-muted-foreground transition-colors"
+              title="Add Bank"
+            >
+              <Plus size={14} />
+            </button>
+          </div>
+
+          <nav className="py-2 flex-shrink-0">
+            {loading ? (
+              <div className="px-4 py-2 space-y-3">
+                {[1, 2].map(i => (
+                  <div key={i} className="flex items-center gap-2">
+                    <Skeleton className="w-7 h-7 rounded-md" />
+                    <div className="flex-1 space-y-1">
+                      <Skeleton className="h-2.5 w-2/3" />
+                      <Skeleton className="h-2 w-1/2" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              accounts.filter(a => a.type === "bank").map(acc => {
+                const closing = calcBalance(acc);
+                const isActive = activeTab === acc.id;
+                return (
+                  <button
+                    key={acc.id}
+                    onClick={() => setActiveTab(acc.id)}
+                    className={`w-full text-left px-4 py-3 flex items-center justify-between gap-2 transition-all group ${
+                      isActive ? "bg-secondary border-r-2 border-r-accent" : "hover:bg-gray-50"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className="w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0" style={{ backgroundColor: acc.bgColor }}>
+                        <Landmark size={13} style={{ color: acc.color }} />
+                      </div>
+                      <div className="min-w-0">
+                        <div className={`text-xs font-semibold truncate ${isActive ? "text-accent" : "text-foreground"}`}>{acc.name}</div>
+                        <div className={`text-xs font-mono mt-0.5 ${closing < 0 ? "text-red-500" : "text-emerald-600"}`}>{fmtSign(closing)}</div>
+                      </div>
+                    </div>
+                    <ChevronRight size={12} className={`flex-shrink-0 text-muted-foreground transition-transform ${isActive ? "rotate-90 text-accent" : ""}`} />
+                  </button>
+                );
+              })
+            )}
+          </nav>
+
+          <div className="px-4 py-2 border-y border-border flex items-center justify-between bg-gray-100">
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest py-1">Overdrafts</p>
             <button 
               onClick={() => {
@@ -1699,12 +1880,10 @@ export default function App() {
               {/* Account Header */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: activeAccount.bgColor }}>
-                    {activeAccount.type === "overdraft"
-                      ? <CreditCard size={18} style={{ color: activeAccount.color }} />
-                      : <Building2 size={18} style={{ color: activeAccount.color }} />}
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ backgroundColor: activeAccount.bgColor }}>
+                    {(() => { const Icon = accountTypeIcon(activeAccount.type); return <Icon size={18} style={{ color: activeAccount.color }} />; })()}
                   </div>
-                  <div>
+                  <div className="flex flex-col justify-center">
                     {editingName === activeAccount.id ? (
                       <div className="flex items-center gap-2 mb-0.5">
                         <input
@@ -1713,19 +1892,17 @@ export default function App() {
                           onChange={e => setNameInput(e.target.value)}
                           className="border border-border rounded px-2 py-0.5 text-xl font-bold text-foreground focus:outline-none focus:border-accent w-48"
                           autoFocus
-                          onKeyDown={e => {
+                          onKeyDown={async e => {
                             if (e.key === 'Enter') {
-                              editAccountName(activeAccount.id, nameInput);
-                              setEditingName(null);
+                              if (await editAccountName(activeAccount.id, nameInput)) setEditingName(null);
                             } else if (e.key === 'Escape') {
                               setEditingName(null);
                             }
                           }}
                         />
-                        <button 
-                          onClick={() => {
-                            editAccountName(activeAccount.id, nameInput);
-                            setEditingName(null);
+                        <button
+                          onClick={async () => {
+                            if (await editAccountName(activeAccount.id, nameInput)) setEditingName(null);
                           }}
                           className="p-1 rounded bg-green-100 text-green-700 hover:bg-green-200 transition-colors"
                           title="Save"
@@ -1757,19 +1934,22 @@ export default function App() {
                             setShowDeleteDialog(true);
                           }}
                           className="p-1 rounded text-red-500 hover:bg-red-50 transition-colors"
-                          title="Delete Company"
+                          title="Delete Account"
                         >
                           <Trash2 size={16} />
                         </button>
+                        {activeAccount.type === "overdraft" && (
+                          <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-700 leading-none">Overdraft</span>
+                        )}
+                        {activeAccount.type === "bank" && (
+                          <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-teal-100 text-teal-700 leading-none">Bank</span>
+                        )}
                       </div>
                     )}
                     <p className="text-sm text-muted-foreground">
-                      {activeAccount.type === "overdraft" ? "Overdraft Account" : "Company Account"}
+                      {accountTypeLabel(activeAccount.type)}
                     </p>
                   </div>
-                  {activeAccount.type === "overdraft" && (
-                    <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-700">Overdraft</span>
-                  )}
                 </div>
                 <button
                   onClick={() => setShowForm(true)}
@@ -2340,7 +2520,9 @@ export default function App() {
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
             <div className="px-6 py-4 border-b border-border flex items-center justify-between">
-              <h3 className="font-semibold text-lg text-foreground">Add New Company</h3>
+              <h3 className="font-semibold text-lg text-foreground">
+                {companyForm.type === "overdraft" ? "Add New Overdraft" : companyForm.type === "bank" ? "Add New Bank" : "Add New Company"}
+              </h3>
               <button onClick={() => setShowAddCompany(false)} className="text-muted-foreground hover:bg-gray-100 p-1.5 rounded-lg transition-colors">
                 <X size={18} />
               </button>
@@ -2365,6 +2547,7 @@ export default function App() {
                     className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-accent"
                   >
                     <option value="company">Company</option>
+                    <option value="bank">Bank</option>
                     <option value="overdraft">Overdraft</option>
                   </select>
                 </div>
@@ -2385,7 +2568,7 @@ export default function App() {
                 Cancel
               </button>
               <button onClick={addCompany} className="px-4 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors shadow-sm">
-                Add Company
+                {companyForm.type === "overdraft" ? "Add Overdraft" : companyForm.type === "bank" ? "Add Bank" : "Add Company"}
               </button>
             </div>
           </div>
@@ -2571,8 +2754,14 @@ export default function App() {
                   <ArrowLeftRight size={18} className="text-white" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-base text-white">Inter-Company Transfer</h3>
-                  <p className="text-xs text-white/60">Transfer balance between company accounts</p>
+                  <h3 className="font-bold text-base text-white">Inter-Account Transfer</h3>
+                  <p className="text-xs text-white/60">
+                    {exchangeForm.category === "bank"
+                      ? "Transfer balance between bank accounts"
+                      : exchangeForm.category === "companyToBank"
+                      ? "Record a company payment made through bank accounts"
+                      : "Transfer balance between company accounts"}
+                  </p>
                 </div>
               </div>
               <button onClick={() => setShowExchange(false)} className="text-white/60 hover:text-white transition-colors">
@@ -2581,42 +2770,188 @@ export default function App() {
             </div>
 
             <div className="p-6 space-y-4">
-              {/* Source Company */}
+              {/* Transfer Category */}
               <div>
-                <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">From Account</label>
-                <select
-                  value={exchangeForm.sourceId}
-                  onChange={e => {
-                    const nextDestId = accounts.find(a => a.id !== e.target.value)?.id || "";
-                    setExchangeForm({ ...exchangeForm, sourceId: e.target.value, destId: nextDestId === e.target.value ? "" : nextDestId });
-                  }}
-                  className="w-full border border-border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30 bg-input-background"
-                >
-                  {accounts.map(acc => (
-                    <option key={acc.id} value={acc.id}>
-                      {acc.name} ({fmtSign(calcBalance(acc))})
-                    </option>
-                  ))}
-                </select>
+                <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Transfer Between</label>
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const companyAccs = accounts.filter(a => a.type === "company");
+                      setExchangeForm({ ...exchangeForm, category: "company", sourceId: companyAccs[0]?.id || "", destId: companyAccs[1]?.id || "", fromCompanyId: "", toCompanyId: "" });
+                    }}
+                    className={`py-2.5 rounded-lg text-xs font-semibold flex flex-col items-center justify-center gap-1 border-2 transition-all ${
+                      exchangeForm.category === "company" ? "bg-secondary border-accent text-accent" : "border-border text-muted-foreground hover:border-accent/30"
+                    }`}
+                  >
+                    <Building2 size={15} />
+                    Company ↔ Company
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const bankAccs = accounts.filter(a => a.type === "bank");
+                      setExchangeForm({ ...exchangeForm, category: "bank", sourceId: bankAccs[0]?.id || "", destId: bankAccs[1]?.id || "", fromCompanyId: "", toCompanyId: "" });
+                    }}
+                    className={`py-2.5 rounded-lg text-xs font-semibold flex flex-col items-center justify-center gap-1 border-2 transition-all ${
+                      exchangeForm.category === "bank" ? "bg-teal-50 border-teal-500 text-teal-700" : "border-border text-muted-foreground hover:border-teal-200"
+                    }`}
+                  >
+                    <Landmark size={15} />
+                    Bank ↔ Bank
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const companyAccs = accounts.filter(a => a.type === "company");
+                      const bankAccs = accounts.filter(a => a.type === "bank");
+                      setExchangeForm({
+                        ...exchangeForm,
+                        category: "companyToBank",
+                        fromCompanyId: companyAccs[0]?.id || "",
+                        toCompanyId: companyAccs[1]?.id || "",
+                        sourceId: bankAccs[0]?.id || "",
+                        destId: bankAccs[1]?.id || "",
+                      });
+                    }}
+                    className={`py-2.5 rounded-lg text-xs font-semibold flex flex-col items-center justify-center gap-1 border-2 transition-all ${
+                      exchangeForm.category === "companyToBank" ? "bg-indigo-50 border-indigo-500 text-indigo-700" : "border-border text-muted-foreground hover:border-indigo-200"
+                    }`}
+                  >
+                    <ArrowLeftRight size={15} />
+                    Company → Bank
+                  </button>
+                </div>
               </div>
 
-              {/* Destination Company */}
-              <div>
-                <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">To Account</label>
-                <select
-                  value={exchangeForm.destId}
-                  onChange={e => setExchangeForm({ ...exchangeForm, destId: e.target.value })}
-                  className="w-full border border-border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30 bg-input-background"
-                >
-                  {accounts
-                    .filter(acc => acc.id !== exchangeForm.sourceId)
-                    .map(acc => (
-                      <option key={acc.id} value={acc.id}>
-                        {acc.name} ({fmtSign(calcBalance(acc))})
-                      </option>
-                    ))}
-                </select>
-              </div>
+              {exchangeForm.category === "companyToBank" ? (
+                <>
+                  {/* From / To Company (context only — no ledger entries posted here) */}
+                  <div>
+                    <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">From Company</label>
+                    <select
+                      value={exchangeForm.fromCompanyId}
+                      onChange={e => {
+                        const companyAccs = accounts.filter(a => a.type === "company");
+                        const nextToId = companyAccs.find(a => String(a.id) !== e.target.value)?.id ?? "";
+                        setExchangeForm({ ...exchangeForm, fromCompanyId: e.target.value, toCompanyId: String(nextToId) === e.target.value ? "" : String(nextToId) });
+                      }}
+                      className="w-full border border-border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30 bg-input-background"
+                    >
+                      {accounts.filter(acc => acc.type === "company").length === 0 && (
+                        <option value="">No company accounts available</option>
+                      )}
+                      {accounts.filter(acc => acc.type === "company").map(acc => (
+                        <option key={acc.id} value={acc.id}>{acc.name}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">To Company</label>
+                    <select
+                      value={exchangeForm.toCompanyId}
+                      onChange={e => setExchangeForm({ ...exchangeForm, toCompanyId: e.target.value })}
+                      className="w-full border border-border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30 bg-input-background"
+                    >
+                      {accounts.filter(acc => acc.type === "company" && String(acc.id) !== exchangeForm.fromCompanyId).length === 0 && (
+                        <option value="">No other company accounts</option>
+                      )}
+                      {accounts
+                        .filter(acc => acc.type === "company" && String(acc.id) !== exchangeForm.fromCompanyId)
+                        .map(acc => (
+                          <option key={acc.id} value={acc.id}>{acc.name}</option>
+                        ))}
+                    </select>
+                  </div>
+
+                  {/* From / To Bank Account — these are the two accounts that actually get debit/credit entries */}
+                  <div>
+                    <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">From Bank Account</label>
+                    <select
+                      value={exchangeForm.sourceId}
+                      onChange={e => {
+                        const bankAccs = accounts.filter(a => a.type === "bank");
+                        const nextDestId = bankAccs.find(a => String(a.id) !== e.target.value)?.id ?? "";
+                        setExchangeForm({ ...exchangeForm, sourceId: e.target.value, destId: String(nextDestId) === e.target.value ? "" : String(nextDestId) });
+                      }}
+                      className="w-full border border-border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30 bg-input-background"
+                    >
+                      {accounts.filter(acc => acc.type === "bank").length === 0 && (
+                        <option value="">No bank accounts available</option>
+                      )}
+                      {accounts.filter(acc => acc.type === "bank").map(acc => (
+                        <option key={acc.id} value={acc.id}>{acc.name} ({fmtSign(calcBalance(acc))})</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">To Bank Account</label>
+                    <select
+                      value={exchangeForm.destId}
+                      onChange={e => setExchangeForm({ ...exchangeForm, destId: e.target.value })}
+                      className="w-full border border-border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30 bg-input-background"
+                    >
+                      {accounts.filter(acc => acc.type === "bank" && String(acc.id) !== exchangeForm.sourceId).length === 0 && (
+                        <option value="">No other bank accounts</option>
+                      )}
+                      {accounts
+                        .filter(acc => acc.type === "bank" && String(acc.id) !== exchangeForm.sourceId)
+                        .map(acc => (
+                          <option key={acc.id} value={acc.id}>{acc.name} ({fmtSign(calcBalance(acc))})</option>
+                        ))}
+                    </select>
+                  </div>
+                </>
+              ) : (
+                <>
+                  {/* Source Account */}
+                  <div>
+                    <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">From Account</label>
+                    <select
+                      value={exchangeForm.sourceId}
+                      onChange={e => {
+                        const categoryAccs = accounts.filter(a => a.type === exchangeForm.category);
+                        const nextDestId = categoryAccs.find(a => String(a.id) !== e.target.value)?.id ?? "";
+                        setExchangeForm({ ...exchangeForm, sourceId: e.target.value, destId: String(nextDestId) === e.target.value ? "" : String(nextDestId) });
+                      }}
+                      className="w-full border border-border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30 bg-input-background"
+                    >
+                      {accounts.filter(acc => acc.type === exchangeForm.category).length === 0 && (
+                        <option value="">No {exchangeForm.category} accounts available</option>
+                      )}
+                      {accounts.filter(acc => acc.type === exchangeForm.category).map(acc => (
+                        <option key={acc.id} value={acc.id}>
+                          {acc.name} ({fmtSign(calcBalance(acc))})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Destination Account */}
+                  <div>
+                    <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">To Account</label>
+                    <select
+                      value={exchangeForm.destId}
+                      onChange={e => setExchangeForm({ ...exchangeForm, destId: e.target.value })}
+                      className="w-full border border-border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30 bg-input-background"
+                    >
+                      {accounts
+                        .filter(acc => acc.type === exchangeForm.category && String(acc.id) !== exchangeForm.sourceId).length === 0 && (
+                        <option value="">No other {exchangeForm.category} accounts</option>
+                      )}
+                      {accounts
+                        .filter(acc => acc.type === exchangeForm.category && String(acc.id) !== exchangeForm.sourceId)
+                        .map(acc => (
+                          <option key={acc.id} value={acc.id}>
+                            {acc.name} ({fmtSign(calcBalance(acc))})
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+                </>
+              )}
 
               {/* Amount */}
               <div>
@@ -2709,7 +3044,12 @@ export default function App() {
               </button>
               <button
                 type="button"
-                disabled={!exchangeForm.sourceId || !exchangeForm.destId || !exchangeForm.amount}
+                disabled={
+                  !exchangeForm.sourceId ||
+                  !exchangeForm.destId ||
+                  !exchangeForm.amount ||
+                  (exchangeForm.category === "companyToBank" && (!exchangeForm.fromCompanyId || !exchangeForm.toCompanyId))
+                }
                 onClick={handleExchangeSubmit}
                 className="flex-1 py-2.5 rounded-lg bg-primary text-white text-sm font-semibold flex items-center justify-center gap-2 hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
               >

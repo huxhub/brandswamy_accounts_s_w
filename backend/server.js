@@ -1,19 +1,21 @@
+import './config/env.js';
 import express from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
+import cookieParser from 'cookie-parser';
 import connectDB from './config/db.js';
 import accountRoutes from './routes/accountRoutes.js';
 
-dotenv.config();
-
-// Connect to MongoDB
+// Connect to MySQL
 connectDB();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Middleware
-app.use(cors());
+// `origin: true` reflects the request's own Origin header, which is required
+// for cookies to be sent cross-site (credentialed CORS can't use a wildcard '*').
+app.use(cors({ origin: true, credentials: true }));
+app.use(cookieParser());
 // Increase payload limit for document uploads (e.g. data URLs)
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
