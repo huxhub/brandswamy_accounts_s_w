@@ -621,38 +621,7 @@ function Dashboard({
     .sort((a, b) => b.date.localeCompare(a.date))
     .slice(0, 8);
 
-  const reminders = useMemo(() => {
-    return accounts
-      .flatMap(a => {
-        const idx = accounts.findIndex(acc => acc.id === a.id);
-        const color = CHART_COLORS[idx % CHART_COLORS.length];
-        return a.transactions
-          .filter((tx: any) => tx.dueDate)
-          .map((tx: any) => ({
-            ...tx,
-            accountId: a.id,
-            accountName: a.name,
-            accountColor: color,
-            accountBg: a.bgColor
-          }));
-      })
-      .sort((a, b) => a.dueDate.localeCompare(b.dueDate));
-  }, [accounts]);
 
-  const dueOrOverdueReminders = useMemo(() => {
-    const todayStr = new Date().toISOString().split('T')[0];
-    return reminders.filter((r: any) => r.dueDate <= todayStr);
-  }, [reminders]);
-
-  const overdueCount = useMemo(() => {
-    const todayStr = new Date().toISOString().split('T')[0];
-    return dueOrOverdueReminders.filter((r: any) => r.dueDate < todayStr).length;
-  }, [dueOrOverdueReminders]);
-
-  const dueTodayCount = useMemo(() => {
-    const todayStr = new Date().toISOString().split('T')[0];
-    return dueOrOverdueReminders.filter((r: any) => r.dueDate === todayStr).length;
-  }, [dueOrOverdueReminders]);
 
   const kpis = [
     {
@@ -718,78 +687,7 @@ function Dashboard({
         </button>
       </div>
 
-      {/* Top Alert Banner for Due Today & Overdue Reminders */}
-      {dueOrOverdueReminders.length > 0 && (
-        <div className="bg-white border border-border border-l-4 border-l-red-600 rounded-2xl p-5 shadow-xs flex flex-col gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center text-red-600 flex-shrink-0">
-              <Bell size={18} />
-            </div>
-            <div>
-              <h4 className="font-bold text-sm text-gray-900">Active Reminders</h4>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                The following tasks have hit their scheduled date:
-              </p>
-            </div>
-          </div>
-          
-          <div className="space-y-2">
-            {dueOrOverdueReminders.map((rem: any) => {
-              const todayStr = new Date().toISOString().split('T')[0];
-              const isOverdue = rem.dueDate < todayStr;
-              
-              // Calculate difference in days
-              const diffTime = new Date(rem.dueDate).getTime() - new Date(todayStr).getTime();
-              const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-              
-              let statusText = "";
-              let statusColorClass = "";
-              let borderClass = "";
-              if (isOverdue) {
-                statusText = `Overdue by ${Math.abs(diffDays)}d`;
-                statusColorClass = "bg-rose-50 text-rose-700 border-rose-100";
-                borderClass = "border-l-rose-500";
-              } else {
-                statusText = "Due Today";
-                statusColorClass = "bg-amber-50 text-amber-800 border-amber-100";
-                borderClass = "border-l-amber-500";
-              }
-              
-              return (
-                <div 
-                  key={rem.id} 
-                  className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 bg-gray-50/40 hover:bg-gray-50/80 rounded-xl border border-gray-150 border-l-4 ${borderClass} transition-colors shadow-3xs`}
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <span className={`text-[10px] px-2 py-0.5 rounded-full border ${statusColorClass} font-semibold flex-shrink-0`}>
-                      {statusText}
-                    </span>
-                    <div className="text-xs font-semibold text-gray-800 truncate" title={rem.description}>
-                      {rem.description}
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-3 flex-shrink-0 text-[10px] text-muted-foreground self-end sm:self-auto font-mono">
-                    <span className="flex items-center gap-1">
-                      <FileText size={10} />
-                      {rem.dueDate.split("-").reverse().join("/")}
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-          
-          <div className="flex justify-end border-t border-border pt-3">
-            <button
-              onClick={() => onNavigate("reminders")}
-              className="text-xs font-semibold text-red-600 hover:text-red-700 hover:underline flex items-center gap-1"
-            >
-              View All Reminders &rarr;
-            </button>
-          </div>
-        </div>
-      )}
+
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
