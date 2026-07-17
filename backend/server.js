@@ -3,10 +3,12 @@ import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import connectDB from './config/db.js';
+import { seedDefaultUsers } from './config/seedUsers.js';
 import accountRoutes from './routes/accountRoutes.js';
 
-// Connect to MySQL
-connectDB();
+// Connect to MySQL, then ensure the default users exist before accepting traffic.
+await connectDB();
+await seedDefaultUsers();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
