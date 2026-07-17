@@ -532,7 +532,8 @@ function Dashboard({
       amount: 0,
       dueDate: reminderDate,
     };
-    onAddTransaction(accounts[0].id, tx);
+    const companyAcc = accounts.find(acc => acc.type === "company") || accounts[0];
+    onAddTransaction(companyAcc.id, tx);
     setReminderNote("");
     setReminderDate("");
     setShowReminderModal(false);
@@ -1284,7 +1285,10 @@ function RemindersPage({
   const [showReminderModal, setShowReminderModal] = useState(false);
   const [reminderNote, setReminderNote] = useState("");
   const [reminderDate, setReminderDate] = useState("");
-  const [selectedAccountId, setSelectedAccountId] = useState(accounts[0]?.id || "");
+  const [selectedAccountId, setSelectedAccountId] = useState(() => {
+    const companies = accounts.filter(acc => acc.type === "company");
+    return companies[0]?.id || "";
+  });
 
   const saveReminder = () => {
     if (!selectedAccountId) {
@@ -1476,8 +1480,8 @@ function RemindersPage({
                   onChange={e => setSelectedAccountId(e.target.value)}
                   className="w-full border border-border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-500/30 bg-input-background"
                 >
-                  {accounts.map(acc => (
-                    <option key={acc.id} value={acc.id}>{acc.name} ({acc.type})</option>
+                  {accounts.filter(acc => acc.type === "company").map(acc => (
+                    <option key={acc.id} value={acc.id}>{acc.name}</option>
                   ))}
                 </select>
               </div>
