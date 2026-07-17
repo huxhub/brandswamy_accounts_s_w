@@ -159,11 +159,18 @@ function fmtSign(n: number): string {
 const today = new Date().toISOString().split("T")[0];
 
 // ─── PDF Generator ────────────────────────────────────────────────────────────
-function generateMonthlyPDF(accounts: Account[], month: number, year: number) {
+function generateMonthlyPDF(accounts: Account[], month: number, year: number, day?: number) {
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   const monthName = new Date(year, month - 1, 1).toLocaleString("en-IN", { month: "long" });
   const pageW = doc.internal.pageSize.getWidth();
   const margin = 14;
+
+  // Day-wise report: narrow every filter/date-cutoff below to a single day
+  // instead of the whole month. Everything else (summary table, transfers,
+  // consolidated log, footer) is shared between the two report types.
+  const periodLabel = day ? `${day} ${monthName} ${year}` : `${monthName} ${year}`;
+  const reportTitle = day ? "Day Report" : "Monthly Report";
+  const fileNamePeriod = day ? `${day}_${monthName}_${year}` : `${monthName}_${year}`;
 
   const filterTx = (txs: Transaction[]) =>
     txs.filter(tx => {
@@ -171,7 +178,9 @@ function generateMonthlyPDF(accounts: Account[], month: number, year: number) {
       if (parts.length < 2) return false;
       const txYear = parseInt(parts[0], 10);
       const txMonth = parseInt(parts[1], 10);
-      return txMonth === month && txYear === year;
+      const txDay = parts.length > 2 ? parseInt(parts[2], 10) : undefined;
+      if (txMonth !== month || txYear !== year) return false;
+      return day ? txDay === day : true;
     });
 
   // ── Header banner ──
@@ -186,7 +195,7 @@ function generateMonthlyPDF(accounts: Account[], month: number, year: number) {
   doc.text("Multi-Company Accounting System", margin, 19);
   doc.setFontSize(11);
   doc.setFont("helvetica", "bold");
-  doc.text(`Monthly Report — ${monthName} ${year}`, pageW - margin, 12, { align: "right" });
+  doc.text(`${reportTitle} — ${periodLabel}`, pageW - margin, 12, { align: "right" });
   doc.setFontSize(9);
   doc.setFont("helvetica", "normal");
   doc.text(`Generated: ${new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}`, pageW - margin, 19, { align: "right" });
@@ -203,25 +212,38 @@ function generateMonthlyPDF(accounts: Account[], month: number, year: number) {
   let totalDebit = 0;
   let totalClose = 0;
 
+  // True if date `d` falls strictly before the report period (the whole
+  // month, or — for a day report — before that specific day).
+  const isBeforePeriod = (d: Date) => {
+    if (d.getFullYear() !== year) return d.getFullYear() < year;
+    const dMonth = d.getMonth() + 1;
+    if (dMonth !== month) return dMonth < month;
+    return day ? d.getDate() < day : false;
+  };
+  // True if date `d` falls on/before the last day of the report period.
+  const isOnOrBeforePeriodEnd = (d: Date) => {
+    if (d.getFullYear() !== year) return d.getFullYear() < year;
+    const dMonth = d.getMonth() + 1;
+    if (dMonth !== month) return dMonth < month;
+    return day ? d.getDate() <= day : true;
+  };
+
   accounts.forEach(acc => {
-    // Transactions before this month to calculate accurate monthly opening balance
-    const txsBeforeMonth = acc.transactions.filter(tx => {
-      const d = new Date(tx.date);
-      return d.getFullYear() < year || (d.getFullYear() === year && d.getMonth() + 1 < month);
-    });
+    // Transactions before this period to calculate an accurate opening balance
+    const txsBeforeMonth = acc.transactions.filter(tx => isBeforePeriod(new Date(tx.date)));
     const creditBefore = txsBeforeMonth.filter(t => t.type === "credit").reduce((s, t) => s + t.amount, 0);
     const debitBefore = txsBeforeMonth.filter(t => t.type === "debit").reduce((s, t) => s + t.amount, 0);
     const monthlyOpeningBalance = acc.openingBalance + creditBefore - debitBefore;
 
-    // Transactions during this month
+    // Transactions during this period
     const txs = filterTx(acc.transactions);
     const credit = txs.filter(t => t.type === "credit").reduce((s, t) => s + t.amount, 0);
     const debit = txs.filter(t => t.type === "debit").reduce((s, t) => s + t.amount, 0);
     const closing = monthlyOpeningBalance + credit - debit;
 
-    // Check if the account existed in or before the selected month
+    // Check if the account existed in or before the selected period
     const accDate = acc.createdAt ? new Date(acc.createdAt) : new Date();
-    const isExisted = accDate.getFullYear() < year || (accDate.getFullYear() === year && accDate.getMonth() + 1 <= month);
+    const isExisted = isOnOrBeforePeriodEnd(accDate);
 
     // Only show accounts that either:
     // 1. Existed in/before this month AND have a non-zero opening/closing balance
@@ -296,8 +318,9 @@ function generateMonthlyPDF(accounts: Account[], month: number, year: number) {
       if (parts.length < 2) return;
       const txYear = parseInt(parts[0], 10);
       const txMonth = parseInt(parts[1], 10);
-      const isThisMonth = txMonth === month && txYear === year;
-      
+      const txDay = parts.length > 2 ? parseInt(parts[2], 10) : undefined;
+      const isThisMonth = txMonth === month && txYear === year && (day ? txDay === day : true);
+
       const isTransfer = tx.reference && (
         tx.exchangeType || 
         tx.reference.startsWith("EX-") ||
@@ -415,7 +438,7 @@ function generateMonthlyPDF(accounts: Account[], month: number, year: number) {
     doc.text("ACCOUNTS TRANSACTIONS", margin, 9);
     doc.setFontSize(9);
     doc.setFont("helvetica", "normal");
-    doc.text(`All transactions across all companies — ${monthName} ${year}`, margin, 16);
+    doc.text(`All transactions across all companies — ${periodLabel}`, margin, 16);
     doc.text(`Page ${(doc.internal as any).getCurrentPageInfo().pageNumber}`, pageW - margin, 16, { align: "right" });
 
     const allTxRows = allTransactions.map((tx, idx) => [
@@ -463,7 +486,7 @@ function generateMonthlyPDF(accounts: Account[], month: number, year: number) {
     doc.text(`Page ${i} of ${totalPages}`, pageW - margin, doc.internal.pageSize.getHeight() - 3.5, { align: "right" });
   }
 
-  doc.save(`Monthly_Report_${monthName}_${year}.pdf`);
+  doc.save(`${reportTitle.replace(" ", "_")}_${fileNamePeriod}.pdf`);
 }
 
 // ─── Dashboard Page ────────────────────────────────────────────────────────────
@@ -1292,8 +1315,10 @@ export default function App() {
   const [showAddCompany, setShowAddCompany] = useState(false);
   const [companyForm, setCompanyForm] = useState({ name: "", type: "company", openingBalance: "", color: "#1e3a5f" });
   const [showReport, setShowReport] = useState(false);
+  const [reportType, setReportType] = useState<"month" | "day">("month");
   const [reportMonth, setReportMonth] = useState(new Date().getMonth() + 1);
   const [reportYear, setReportYear] = useState(new Date().getFullYear());
+  const [reportDay, setReportDay] = useState(new Date().toISOString().split("T")[0]);
   const [editingOpening, setEditingOpening] = useState<string | null>(null);
   const [openingInput, setOpeningInput] = useState("");
   const [editingName, setEditingName] = useState<string | null>(null);
@@ -2394,7 +2419,7 @@ export default function App() {
                   <FileDown size={18} className="text-white" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-base text-white">Monthly Report</h3>
+                  <h3 className="font-bold text-base text-white">{reportType === "day" ? "Day Report" : "Monthly Report"}</h3>
                   <p className="text-xs text-white/60">Download as PDF</p>
                 </div>
               </div>
@@ -2405,38 +2430,78 @@ export default function App() {
 
             <div className="p-6 space-y-5">
               <div>
-                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide block mb-2">Select Month</label>
-                <div className="grid grid-cols-3 gap-2">
-                  {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
-                    <button
-                      key={m}
-                      onClick={() => setReportMonth(m)}
-                      className={`py-2 rounded-lg text-xs font-semibold transition-all border ${
-                        reportMonth === m
-                          ? "bg-primary text-white border-primary"
-                          : "border-border text-muted-foreground hover:border-primary/40 hover:text-foreground"
-                      }`}
-                    >
-                      {new Date(2000, m - 1, 1).toLocaleString("en-IN", { month: "short" })}
-                    </button>
-                  ))}
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide block mb-2">Report Type</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => setReportType("month")}
+                    className={`py-2 rounded-lg text-xs font-semibold transition-all border ${
+                      reportType === "month"
+                        ? "bg-primary text-white border-primary"
+                        : "border-border text-muted-foreground hover:border-primary/40 hover:text-foreground"
+                    }`}
+                  >
+                    Monthly
+                  </button>
+                  <button
+                    onClick={() => setReportType("day")}
+                    className={`py-2 rounded-lg text-xs font-semibold transition-all border ${
+                      reportType === "day"
+                        ? "bg-primary text-white border-primary"
+                        : "border-border text-muted-foreground hover:border-primary/40 hover:text-foreground"
+                    }`}
+                  >
+                    Day-wise
+                  </button>
                 </div>
               </div>
 
-              <div>
-                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide block mb-2">Select Year</label>
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={() => setReportYear(y => y - 1)}
-                    className="w-9 h-9 rounded-lg border border-border flex items-center justify-center text-muted-foreground hover:border-primary/40 hover:text-foreground transition-all text-lg font-bold"
-                  >‹</button>
-                  <div className="flex-1 text-center font-mono font-bold text-xl text-foreground">{reportYear}</div>
-                  <button
-                    onClick={() => setReportYear(y => y + 1)}
-                    className="w-9 h-9 rounded-lg border border-border flex items-center justify-center text-muted-foreground hover:border-primary/40 hover:text-foreground transition-all text-lg font-bold"
-                  >›</button>
+              {reportType === "month" ? (
+                <>
+                  <div>
+                    <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide block mb-2">Select Month</label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
+                        <button
+                          key={m}
+                          onClick={() => setReportMonth(m)}
+                          className={`py-2 rounded-lg text-xs font-semibold transition-all border ${
+                            reportMonth === m
+                              ? "bg-primary text-white border-primary"
+                              : "border-border text-muted-foreground hover:border-primary/40 hover:text-foreground"
+                          }`}
+                        >
+                          {new Date(2000, m - 1, 1).toLocaleString("en-IN", { month: "short" })}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide block mb-2">Select Year</label>
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => setReportYear(y => y - 1)}
+                        className="w-9 h-9 rounded-lg border border-border flex items-center justify-center text-muted-foreground hover:border-primary/40 hover:text-foreground transition-all text-lg font-bold"
+                      >‹</button>
+                      <div className="flex-1 text-center font-mono font-bold text-xl text-foreground">{reportYear}</div>
+                      <button
+                        onClick={() => setReportYear(y => y + 1)}
+                        className="w-9 h-9 rounded-lg border border-border flex items-center justify-center text-muted-foreground hover:border-primary/40 hover:text-foreground transition-all text-lg font-bold"
+                      >›</button>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div>
+                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide block mb-2">Select Date</label>
+                  <input
+                    type="date"
+                    value={reportDay}
+                    onChange={e => setReportDay(e.target.value)}
+                    className="w-full border border-border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30 bg-input-background font-mono"
+                  />
                 </div>
-              </div>
+              )}
 
               {/* Preview summary */}
               <div className="bg-secondary rounded-xl p-4 space-y-1.5">
@@ -2460,15 +2525,28 @@ export default function App() {
               </div>
 
               <div className="text-center py-1">
-                <div className="text-sm font-semibold text-foreground">
-                  {new Date(reportYear, reportMonth - 1, 1).toLocaleString("en-IN", { month: "long", year: "numeric" })}
-                </div>
-                <div className="text-xs text-muted-foreground mt-0.5">
-                  {accounts.reduce((s, a) => s + a.transactions.filter((tx : any) => {
-                    const d = new Date(tx.date);
-                    return d.getMonth() + 1 === reportMonth && d.getFullYear() === reportYear;
-                  }).length, 0)} transactions across all accounts
-                </div>
+                {reportType === "month" ? (
+                  <>
+                    <div className="text-sm font-semibold text-foreground">
+                      {new Date(reportYear, reportMonth - 1, 1).toLocaleString("en-IN", { month: "long", year: "numeric" })}
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-0.5">
+                      {accounts.reduce((s, a) => s + a.transactions.filter((tx: any) => {
+                        const d = new Date(tx.date);
+                        return d.getMonth() + 1 === reportMonth && d.getFullYear() === reportYear;
+                      }).length, 0)} transactions across all accounts
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="text-sm font-semibold text-foreground">
+                      {reportDay ? new Date(reportDay).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" }) : "Select a date"}
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-0.5">
+                      {accounts.reduce((s, a) => s + a.transactions.filter((tx: any) => tx.date === reportDay).length, 0)} transactions across all accounts
+                    </div>
+                  </>
+                )}
               </div>
             </div>
 
@@ -2480,11 +2558,17 @@ export default function App() {
                 Cancel
               </button>
               <button
+                disabled={reportType === "day" && !reportDay}
                 onClick={() => {
-                  generateMonthlyPDF(accounts, reportMonth, reportYear);
+                  if (reportType === "day") {
+                    const [y, m, d] = reportDay.split("-").map(Number);
+                    generateMonthlyPDF(accounts, m, y, d);
+                  } else {
+                    generateMonthlyPDF(accounts, reportMonth, reportYear);
+                  }
                   setShowReport(false);
                 }}
-                className="flex-1 py-2.5 rounded-lg bg-primary text-white text-sm font-semibold flex items-center justify-center gap-2 hover:opacity-90 transition-opacity"
+                className="flex-1 py-2.5 rounded-lg bg-primary text-white text-sm font-semibold flex items-center justify-center gap-2 hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
               >
                 <Download size={15} />
                 Download PDF
