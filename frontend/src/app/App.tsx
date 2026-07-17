@@ -4,7 +4,7 @@ import {
   Plus, Trash2, TrendingUp, TrendingDown, BarChart3, Building2,
   CreditCard, ChevronRight, X, Edit3, LayoutDashboard, ArrowUpRight,
   ArrowDownRight, Wallet, Activity, FileText, Image,
-  Download, Upload, FileDown, Check, LogOut, Menu, ArrowLeftRight, Bell, Landmark
+  Download, Upload, FileDown, Check, LogOut, Menu, ArrowLeftRight, Bell, Landmark, Settings
 } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -1311,6 +1311,32 @@ export default function App() {
   }, [reminders]);
 
   const [activeTab, setActiveTab] = useState<string>("dashboard");
+  const [settings, setSettings] = useState(() => {
+    const saved = localStorage.getItem("brandswamy_settings");
+    const defaults = {
+      companyName: "BRAND SWAMY",
+      companySubtitle: "Accounts Manager",
+      logoUrl: "",
+      themeColor: "#c21818",
+    };
+    if (saved) {
+      try {
+        return { ...defaults, ...JSON.parse(saved) };
+      } catch (e) {
+        return defaults;
+      }
+    }
+    return defaults;
+  });
+  const [tempSettings, setTempSettings] = useState({ ...settings });
+  const [showSettings, setShowSettings] = useState(false);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    root.style.setProperty("--primary", settings.themeColor);
+    root.style.setProperty("--accent", settings.themeColor);
+  }, [settings.themeColor]);
+
   const [showForm, setShowForm] = useState(false);
   const [showAddCompany, setShowAddCompany] = useState(false);
   const [companyForm, setCompanyForm] = useState({ name: "", type: "company", openingBalance: "", color: "#1e3a5f" });
@@ -1650,29 +1676,33 @@ export default function App() {
             <Menu size={20} />
           </button>
           
-          <svg
-            viewBox="0 0 100 100"
-            className="w-8 h-8 sm:w-9 sm:h-9 text-white fill-none stroke-current"
-            strokeWidth="4.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            {/* Outer Gopuram arch */}
-            <path d="M22 80 C22 68, 30 66, 30 54 C30 42, 38 40, 38 28 C38 18, 45 14, 50 14 C55 14, 62 18, 62 28 C62 40, 70 42, 70 54 C70 66, 78 68, 78 80" />
-            {/* Middle Gopuram arch */}
-            <path d="M34 80 C34 71, 40 69, 40 59 C40 49, 45 47, 45 37 C45 32, 48 29, 50 29 C52 29, 55 32, 55 37 C55 49, 60 49, 60 59 C60 69, 66 71, 66 80" strokeWidth="3.2" />
-            {/* Inner Gopuram arch */}
-            <path d="M46 80 C46 74, 50 71, 50 63 C50 71, 54 74, 54 80" strokeWidth="2.2" />
-            {/* Center dot */}
-            <circle cx="50" cy="50" r="3.5" className="fill-current stroke-none" />
-          </svg>
+          {settings.logoUrl ? (
+            <img src={settings.logoUrl} className="w-8 h-8 sm:w-9 sm:h-9 object-contain bg-white/10 p-1 rounded-lg" alt="Logo" />
+          ) : (
+            <svg
+              viewBox="0 0 100 100"
+              className="w-8 h-8 sm:w-9 sm:h-9 text-white fill-none stroke-current"
+              strokeWidth="4.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              {/* Outer Gopuram arch */}
+              <path d="M22 80 C22 68, 30 66, 30 54 C30 42, 38 40, 38 28 C38 18, 45 14, 50 14 C55 14, 62 18, 62 28 C62 40, 70 42, 70 54 C70 66, 78 68, 78 80" />
+              {/* Middle Gopuram arch */}
+              <path d="M34 80 C34 71, 40 69, 40 59 C40 49, 45 47, 45 37 C45 32, 48 29, 50 29 C52 29, 55 32, 55 37 C55 49, 60 49, 60 59 C60 69, 66 71, 66 80" strokeWidth="3.2" />
+              {/* Inner Gopuram arch */}
+              <path d="M46 80 C46 74, 50 71, 50 63 C50 71, 54 74, 54 80" strokeWidth="2.2" />
+              {/* Center dot */}
+              <circle cx="50" cy="50" r="3.5" className="fill-current stroke-none" />
+            </svg>
+          )}
           
           <div className="flex flex-col">
             <span className="text-base sm:text-lg font-bold tracking-wider text-white leading-none font-sans">
-              BRAND SWAMY
+              {settings.companyName}
             </span>
             <span className="text-[9px] sm:text-[10px] text-white/70 mt-0.5 tracking-wider font-semibold">
-              Accounts Manager
+              {settings.companySubtitle}
             </span>
           </div>
         </div>
@@ -1914,7 +1944,17 @@ export default function App() {
 
 
 
-          <div className="p-4 mt-auto border-t border-border bg-gray-50/50">
+          <div className="p-4 mt-auto border-t border-border bg-gray-50/50 space-y-2">
+            <button
+              onClick={() => {
+                setTempSettings({ ...settings });
+                setShowSettings(true);
+              }}
+              className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold text-muted-foreground hover:bg-gray-100 hover:text-foreground transition-colors"
+            >
+              <Settings size={15} />
+              Settings
+            </button>
             <button
               onClick={handleLogout}
               className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold text-muted-foreground hover:bg-red-50 hover:text-red-600 transition-colors"
@@ -3288,6 +3328,158 @@ export default function App() {
                 className="px-4 py-2 text-sm font-medium bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors shadow-sm"
               >
                 Confirm Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showSettings && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="px-6 py-4 border-b border-border bg-primary flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-white/15 flex items-center justify-center">
+                  <Settings size={18} className="text-white" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-base text-white">Application Settings</h3>
+                  <p className="text-xs text-white/60">Customize branding & theme</p>
+                </div>
+              </div>
+              <button onClick={() => setShowSettings(false)} className="text-white/60 hover:text-white transition-colors">
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4 flex-1 overflow-y-auto">
+              <div>
+                <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Company Name</label>
+                <input
+                  type="text"
+                  value={tempSettings.companyName}
+                  onChange={e => setTempSettings({ ...tempSettings, companyName: e.target.value })}
+                  placeholder="BRAND SWAMY"
+                  className="w-full border border-border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30 bg-input-background font-semibold"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Subtitle / Description</label>
+                <input
+                  type="text"
+                  value={tempSettings.companySubtitle}
+                  onChange={e => setTempSettings({ ...tempSettings, companySubtitle: e.target.value })}
+                  placeholder="Accounts Manager"
+                  className="w-full border border-border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30 bg-input-background"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Company Logo</label>
+                <div className="flex items-center gap-4">
+                  {tempSettings.logoUrl ? (
+                    <img src={tempSettings.logoUrl} className="w-16 h-16 object-contain border border-border rounded-lg p-1 bg-gray-50" alt="Logo preview" />
+                  ) : (
+                    <div className="w-16 h-16 border border-border rounded-lg flex items-center justify-center bg-gray-50 text-muted-foreground text-xs text-center font-medium p-2">
+                      Gopuram Icon (Default)
+                    </div>
+                  )}
+                  <div className="flex flex-col gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const input = document.createElement("input");
+                        input.type = "file";
+                        input.accept = "image/*";
+                        input.onchange = e => {
+                          const file = (e.target as HTMLInputElement).files?.[0];
+                          if (file) {
+                            const reader = new FileReader();
+                            reader.onload = () => {
+                              setTempSettings(s => ({ ...s, logoUrl: reader.result as string }));
+                            };
+                            reader.readAsDataURL(file);
+                          }
+                        };
+                        input.click();
+                      }}
+                      className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-accent text-white hover:opacity-90 transition-opacity"
+                    >
+                      Upload Image
+                    </button>
+                    {tempSettings.logoUrl && (
+                      <button
+                        type="button"
+                        onClick={() => setTempSettings({ ...tempSettings, logoUrl: "" })}
+                        className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-border text-muted-foreground hover:bg-red-50 hover:text-red-600 transition-colors"
+                      >
+                        Reset to Default
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Primary Theme Color</label>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="color"
+                    value={tempSettings.themeColor}
+                    onChange={e => setTempSettings({ ...tempSettings, themeColor: e.target.value })}
+                    className="w-10 h-10 border border-border rounded-lg cursor-pointer bg-transparent"
+                  />
+                  <span className="font-mono text-sm text-foreground font-semibold uppercase">{tempSettings.themeColor}</span>
+                </div>
+                
+                <div className="mt-3">
+                  <label className="block text-[10px] font-bold text-muted-foreground/60 uppercase tracking-wide mb-1.5">Preset Palettes</label>
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      { name: "Brand Red", color: "#c21818" },
+                      { name: "Navy Blue", color: "#1e3a8a" },
+                      { name: "Emerald Green", color: "#047857" },
+                      { name: "Royal Blue", color: "#2563eb" },
+                      { name: "Charcoal Black", color: "#1f2937" },
+                      { name: "Dark Plum", color: "#581c87" },
+                    ].map(preset => (
+                      <button
+                        key={preset.color}
+                        type="button"
+                        onClick={() => setTempSettings({ ...tempSettings, themeColor: preset.color })}
+                        className={`w-6 h-6 rounded-full border-2 transition-transform hover:scale-110 ${
+                          tempSettings.themeColor.toLowerCase() === preset.color.toLowerCase() ? "border-foreground scale-105" : "border-transparent"
+                        }`}
+                        style={{ backgroundColor: preset.color }}
+                        title={preset.name}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="px-6 pb-6 flex gap-3">
+              <button
+                type="button"
+                onClick={() => setShowSettings(false)}
+                className="flex-1 py-2.5 rounded-lg border border-border text-sm font-semibold text-foreground hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setSettings(tempSettings);
+                  localStorage.setItem("brandswamy_settings", JSON.stringify(tempSettings));
+                  setShowSettings(false);
+                  toast.success("Branding settings saved successfully!");
+                }}
+                className="flex-1 py-2.5 rounded-lg text-sm font-semibold text-white transition-all hover:opacity-90"
+                style={{ backgroundColor: tempSettings.themeColor }}
+              >
+                Save Settings
               </button>
             </div>
           </div>
