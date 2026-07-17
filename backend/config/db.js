@@ -15,7 +15,7 @@ const sequelize = new Sequelize(
 const connectDB = async () => {
   try {
     await sequelize.authenticate();
-    await sequelize.sync({ alter: true });
+    await sequelize.sync();
     console.log(`MySQL Connected: ${sequelize.config.host}/${sequelize.config.database}`);
   } catch (error) {
     console.error(`Error: ${error.message}`);
