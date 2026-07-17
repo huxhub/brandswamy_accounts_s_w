@@ -1448,12 +1448,12 @@ export default function App() {
       return;
     }
 
-    const isCompany = activeAccount.type === "company";
-    const selectedBank = isCompany && form.paymentMode === "bank"
+    const isCompanyOrOD = activeAccount.type === "company" || activeAccount.type === "overdraft";
+    const selectedBank = isCompanyOrOD && form.paymentMode === "bank"
       ? findAccountById(accounts, form.selectedBankId)
       : null;
 
-    const companyDescription = isCompany
+    const companyDescription = isCompanyOrOD
       ? `${form.description} (${form.paymentMode === "bank" && selectedBank ? selectedBank.name : "Cash"})`
       : form.description;
 
@@ -1470,7 +1470,7 @@ export default function App() {
     // Only reset/close on success — a failure keeps the form open (with the
     // entered data intact) so the user can retry.
     if (result) {
-      if (isCompany && form.paymentMode === "bank" && selectedBank) {
+      if (isCompanyOrOD && form.paymentMode === "bank" && selectedBank) {
         const bankTx = {
           date: form.date,
           description: `${activeAccount.name}: ${form.description}`,
@@ -2738,7 +2738,7 @@ export default function App() {
                 </div>
               </div>
 
-              {activeAccount.type === "company" && (
+              {(activeAccount.type === "company" || activeAccount.type === "overdraft") && (
                 <div>
                   <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide block mb-2">Paid Via</label>
                   <div className="grid grid-cols-2 gap-2">
@@ -2764,7 +2764,7 @@ export default function App() {
                 </div>
               )}
 
-              {activeAccount.type === "company" && form.paymentMode === "bank" && (
+              {(activeAccount.type === "company" || activeAccount.type === "overdraft") && form.paymentMode === "bank" && (
                 <div>
                   <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide block mb-1.5">Select Bank Account</label>
                   <select
