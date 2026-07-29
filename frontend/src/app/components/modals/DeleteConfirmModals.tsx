@@ -1,4 +1,5 @@
-import { Trash2, X, CheckCircle2 } from "lucide-react";
+import { useState } from "react";
+import { Trash2, X, CheckCircle2, Eye, EyeOff } from "lucide-react";
 import type { Account } from "../../types";
 
 export function DeleteAccountModal({
@@ -18,6 +19,8 @@ export function DeleteAccountModal({
   deleteError: string;
   handleDeleteCompany: () => void;
 }) {
+  const [showPassword, setShowPassword] = useState(false);
+
   if (!showDeleteDialog) return null;
 
   return (
@@ -38,15 +41,25 @@ export function DeleteAccountModal({
 
           <div>
             <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Enter Password to Confirm</label>
-            <input
-              type="password"
-              value={deleteConfirmPassword}
-              onChange={e => setDeleteConfirmPassword(e.target.value)}
-              className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500/30 bg-input-background"
-              placeholder="Enter your password"
-              autoFocus
-              onKeyDown={e => { if (e.key === "Enter") handleDeleteCompany(); }}
-            />
+            <div className="relative">
+              <input
+                type={showPassword ? "text" : "password"}
+                value={deleteConfirmPassword}
+                onChange={e => setDeleteConfirmPassword(e.target.value)}
+                className="w-full border border-border rounded-lg px-3 py-2 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-red-500/30 bg-input-background"
+                placeholder="Enter your password"
+                autoFocus
+                onKeyDown={e => { if (e.key === "Enter") handleDeleteCompany(); }}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-2.5 text-muted-foreground hover:text-foreground transition-colors"
+                title={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
           </div>
 
           {deleteError && (
