@@ -93,8 +93,8 @@ const connectDB = async () => {
     await sequelize.sync();
     console.log(`MySQL Connected: ${sequelize.config.host}/${sequelize.config.database}`);
   } catch (error) {
-    console.error(`Error: ${error.message}`);
-    process.exit(1);
+    console.error(`[DB Error]: ${error.message}`);
+    throw error;
   }
 };
 

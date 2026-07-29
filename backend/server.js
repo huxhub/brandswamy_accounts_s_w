@@ -108,6 +108,10 @@ app.get('/', (req, res) => {
   res.send('Accounts Management API is running...');
 });
 
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', message: 'Brandswamy API is running' });
+});
+
 // Keeps error responses (e.g. CORS rejections) JSON like the rest of the API,
 // and avoids Express's default HTML error page.
 app.use((err, _req, res, next) => {
