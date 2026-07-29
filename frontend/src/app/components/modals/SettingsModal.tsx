@@ -53,7 +53,7 @@ export function SettingsModal({
               type="text"
               value={tempSettings.companyName}
               onChange={e => setTempSettings({ ...tempSettings, companyName: e.target.value })}
-              placeholder="CHISEL"
+              placeholder="BRANDSWAMY"
               className="w-full border border-border rounded-xl px-3.5 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-accent/25 focus:border-accent bg-white transition-all shadow-3xs font-semibold text-foreground"
             />
           </div>
@@ -123,7 +123,7 @@ export function SettingsModal({
             type="button"
             onClick={() => {
               setSettings(tempSettings);
-              localStorage.setItem("chisel_settings", JSON.stringify(tempSettings));
+              localStorage.setItem("brandswamy_settings", JSON.stringify(tempSettings));
               setShowSettings(false);
               toast.success("Branding settings saved successfully!");
             }}

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import chiselLogo from "../../assets/logo.png";
+import brandswamyLogo from "../../assets/logo.png";
 
 export interface AppSettings {
   companyName: string;
@@ -9,15 +9,15 @@ export interface AppSettings {
 }
 
 const DEFAULTS: AppSettings = {
-  companyName: "CHISEL",
+  companyName: "BRANDSWAMY",
   companySubtitle: "Accounts Manager",
-  logoUrl: chiselLogo,
+  logoUrl: brandswamyLogo,
   themeColor: "#c21818",
 };
 
 export function useSettings() {
   const [settings, setSettings] = useState<AppSettings>(() => {
-    const saved = localStorage.getItem("chisel_settings");
+    const saved = localStorage.getItem("brandswamy_settings") || localStorage.getItem("chisel_settings");
     if (saved) {
       try {
         return { ...DEFAULTS, ...JSON.parse(saved) };

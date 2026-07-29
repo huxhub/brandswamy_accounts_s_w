@@ -1,6 +1,6 @@
 import { Sequelize } from 'sequelize';
 
-const dbName = process.env.DB_NAME || 'chisel_accounts_management';
+const dbName = process.env.DB_NAME || 'brandswamy_accounts_management';
 const dbUser = process.env.DB_USER || 'root';
 const dbPassword = process.env.DB_PASSWORD || '';
 const dbHost = process.env.DB_HOST || '127.0.0.1';

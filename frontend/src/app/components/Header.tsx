@@ -1,5 +1,5 @@
 import { Menu, ArrowLeftRight, FileDown } from "lucide-react";
-import chiselLogo from "../../assets/logo.png";
+import brandswamyLogo from "../../assets/logo.png";
 import type { AppSettings } from "../hooks/useSettings";
 
 export function Header({
@@ -28,7 +28,7 @@ export function Header({
         {settings.logoUrl ? (
           <img src={settings.logoUrl} className="w-8 h-8 sm:w-9 sm:h-9 object-contain bg-white/10 p-1 rounded-lg" alt="Logo" />
         ) : (
-          <img src={chiselLogo} className="w-8 h-8 sm:w-9 sm:h-9 object-contain bg-white/10 p-1 rounded-lg" alt="Logo" />
+          <img src={brandswamyLogo} className="w-8 h-8 sm:w-9 sm:h-9 object-contain bg-white/10 p-1 rounded-lg" alt="Logo" />
         )}
 
         <div className="flex flex-col">

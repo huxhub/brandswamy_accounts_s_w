@@ -28,9 +28,9 @@ app.use(helmet());
 const defaultOrigins = [
   'http://localhost:5173',
   'http://localhost:3000',
-  'https://chisel.uxhub.in',
-  'http://chisel.uxhub.in',
-  'https://chisel-as-bd.uxhub.in',
+  'https://brandswamy.uxhub.in',
+  'http://brandswamy.uxhub.in',
+  'https://brandswamy-as-bd.uxhub.in',
 ];
 
 const envOrigins = (process.env.CORS_ORIGINS || '')
