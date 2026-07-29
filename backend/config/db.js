@@ -47,7 +47,7 @@ const connectDB = async () => {
     try {
       const [existingColumns] = await sequelize.query(
         `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
-         WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'Users' AND COLUMN_NAME = 'isAdmin'`,
+         WHERE LOWER(TABLE_SCHEMA) = LOWER(?) AND LOWER(TABLE_NAME) = LOWER('Users') AND LOWER(COLUMN_NAME) = LOWER('isAdmin')`,
         { replacements: [dbName] }
       );
       if (existingColumns.length === 0) {
@@ -67,7 +67,7 @@ const connectDB = async () => {
     try {
       const [txColumns] = await sequelize.query(
         `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
-         WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'Transactions' AND COLUMN_NAME = 'isCompleted'`,
+         WHERE LOWER(TABLE_SCHEMA) = LOWER(?) AND LOWER(TABLE_NAME) = LOWER('Transactions') AND LOWER(COLUMN_NAME) = LOWER('isCompleted')`,
         { replacements: [dbName] }
       );
       if (txColumns.length === 0) {
@@ -78,7 +78,7 @@ const connectDB = async () => {
 
       const [remColumns] = await sequelize.query(
         `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
-         WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'Transactions' AND COLUMN_NAME = 'isReminder'`,
+         WHERE LOWER(TABLE_SCHEMA) = LOWER(?) AND LOWER(TABLE_NAME) = LOWER('Transactions') AND LOWER(COLUMN_NAME) = LOWER('isReminder')`,
         { replacements: [dbName] }
       );
       if (remColumns.length === 0) {
