@@ -63,14 +63,14 @@ export function TransactionsTable({
 
                 <div className="flex items-center justify-between mt-1 pt-3 border-t border-border/40">
                   {tx.document?.name ? (
-                    <button onClick={() => onViewDoc(tx.document!)} className="flex items-center gap-1.5 px-2 py-1.5 rounded-md bg-blue-50 hover:bg-blue-100 text-blue-600 transition-colors">
+                    <button onClick={() => onViewDoc(tx.document!)} className="flex items-center gap-1.5 px-2 py-1.5 rounded-md bg-red-50 hover:bg-red-100 text-red-600 transition-colors">
                       {tx.document.mimeType?.startsWith("image/") ? <Image size={14} /> : <FileText size={14} />}
                       <span className="text-xs font-medium max-w-[150px] truncate">{tx.document.name}</span>
                     </button>
                   ) : <div />}
                   <div className="flex items-center gap-1 ml-auto">
                     {onEditTransaction && (
-                      <button onClick={() => onEditTransaction(tx)} className="p-1.5 text-muted-foreground hover:bg-blue-50 hover:text-blue-600 rounded-md transition-colors" title="Edit Entry">
+                      <button onClick={() => onEditTransaction(tx)} className="p-1.5 text-muted-foreground hover:bg-red-50 hover:text-red-600 rounded-md transition-colors" title="Edit Entry">
                         <Edit3 size={15} />
                       </button>
                     )}
@@ -138,7 +138,7 @@ export function TransactionsTable({
                     <td className="px-4 py-3 text-center">
                       {tx.document?.name ? (
                         <div className="flex items-center justify-center gap-1">
-                          <button onClick={() => onViewDoc(tx.document!)} className="flex items-center gap-1 px-2 py-1 rounded-md bg-blue-50 hover:bg-blue-100 text-blue-600 transition-colors" title={tx.document.name}>
+                          <button onClick={() => onViewDoc(tx.document!)} className="flex items-center gap-1 px-2 py-1 rounded-md bg-red-50 hover:bg-red-100 text-red-600 transition-colors" title={tx.document.name}>
                             {tx.document.mimeType?.startsWith("image/") ? <Image size={12} /> : <FileText size={12} />}
                             <span className="text-[10px] font-medium max-w-[60px] truncate">{tx.document.name?.split(".")[0]}</span>
                           </button>
@@ -153,7 +153,7 @@ export function TransactionsTable({
                     <td className="px-4 py-3 text-center">
                       <div className="flex items-center justify-center gap-1">
                         {onEditTransaction && (
-                          <button onClick={() => onEditTransaction(tx)} className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-blue-600 transition-all" title="Edit Entry">
+                          <button onClick={() => onEditTransaction(tx)} className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-red-600 transition-all" title="Edit Entry">
                             <Edit3 size={13} />
                           </button>
                         )}

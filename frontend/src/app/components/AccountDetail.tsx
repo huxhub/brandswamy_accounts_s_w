@@ -131,7 +131,7 @@ export function AccountDetail({
                       <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold border ${isOverdue ? "bg-rose-50 text-rose-700 border-rose-200" : "bg-amber-50 text-amber-800 border-amber-200"}`}>{statusText}</span>
                     </div>
                     <p className="text-xs text-slate-500 mt-1">Scheduled due date: <span className="font-mono font-semibold text-slate-700">{rem.dueDate.split("-").reverse().join("/")}</span></p>
-                    <button onClick={onNavigateToReminders} className="text-xs font-semibold text-blue-600 hover:text-blue-700 inline-flex items-center gap-1 mt-2.5 transition-colors">Review Reminders <span className="text-sm">→</span></button>
+                    <button onClick={onNavigateToReminders} className="text-xs font-semibold text-red-600 hover:text-red-700 inline-flex items-center gap-1 mt-2.5 transition-colors">Review Reminders <span className="text-sm">→</span></button>
                   </div>
                 </div>
                 <div className="flex items-center gap-1.5 flex-shrink-0">
