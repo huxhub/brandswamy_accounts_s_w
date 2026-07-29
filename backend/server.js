@@ -23,7 +23,11 @@ const PORT = process.env.PORT || 3001;
 // cookies see the real client IP/protocol instead of the proxy's.
 app.set('trust proxy', 1);
 
-app.use(helmet());
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+  })
+);
 
 const defaultOrigins = [
   'http://localhost:5173',
@@ -31,6 +35,11 @@ const defaultOrigins = [
   'https://brandswamy.uxhub.in',
   'http://brandswamy.uxhub.in',
   'https://brandswamy-as-bd.uxhub.in',
+  'http://brandswamy-as-bd.uxhub.in',
+  'https://brandsway.uxhub.in',
+  'http://brandsway.uxhub.in',
+  'https://chisel.uxhub.in',
+  'http://chisel.uxhub.in',
 ];
 
 const envOrigins = (process.env.CORS_ORIGINS || '')
@@ -40,18 +49,40 @@ const envOrigins = (process.env.CORS_ORIGINS || '')
 
 const allowedOrigins = Array.from(new Set([...defaultOrigins, ...envOrigins]));
 
-app.use(cors({
+const isOriginAllowed = (origin) => {
+  if (!origin) return true;
+  if (allowedOrigins.includes(origin)) return true;
+  try {
+    const hostname = new URL(origin).hostname;
+    if (
+      hostname === 'localhost' ||
+      hostname === '127.0.0.1' ||
+      hostname === 'uxhub.in' ||
+      hostname.endsWith('.uxhub.in')
+    ) {
+      return true;
+    }
+  } catch {
+    // Ignore URL parse error
+  }
+  return false;
+};
+
+const corsOptions = {
   origin(origin, callback) {
-    if (!origin || allowedOrigins.includes(origin)) {
+    if (isOriginAllowed(origin)) {
       return callback(null, true);
     }
     console.warn(`[CORS Blocked Origin]: ${origin}`);
-    return callback(null, false);
+    return callback(new Error(`CORS blocked for origin: ${origin}`));
   },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
-}));
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+  optionsSuccessStatus: 200,
+};
+
+app.use(cors(corsOptions));
 app.use(cookieParser());
 // Increase payload limit for document uploads (e.g. data URLs)
 app.use(express.json({ limit: '10mb' }));
