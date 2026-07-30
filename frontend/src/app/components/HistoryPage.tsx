@@ -9,7 +9,7 @@ import type { HistoryTransaction, AccountSummary } from "../hooks/useHistory";
 import { fmt, fmtSign } from "../types";
 import type { Account, AttachedDoc, Program } from "../types";
 import { HistorySkeleton } from "./HistorySkeleton";
-import { Pagination } from "./ui/Pagination";
+import { Pagination } from "./ui/pagination";
 
 const PRESETS = [
   { key: "all", label: "All Time" },

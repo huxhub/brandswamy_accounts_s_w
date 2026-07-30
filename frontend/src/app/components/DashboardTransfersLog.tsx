@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { ArrowLeftRight } from "lucide-react";
 import { fmt } from "../types";
-import { Pagination } from "./ui/Pagination";
+import { Pagination } from "./ui/pagination";
 
 export function DashboardTransfersLog({ interCompanyTransfers }: { interCompanyTransfers: any[] }) {
   const [currentPage, setCurrentPage] = useState(1);

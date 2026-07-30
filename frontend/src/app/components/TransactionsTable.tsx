@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Image, FileText, Trash2, Edit3, BarChart3, Tag } from "lucide-react";
 import type { Account, AttachedDoc } from "../types";
 import { fmt, calcBalance, calcTotalCredit } from "../types";
-import { Pagination } from "./ui/Pagination";
+import { Pagination } from "./ui/pagination";
 
 export function TransactionsTable({
   activeAccount,
