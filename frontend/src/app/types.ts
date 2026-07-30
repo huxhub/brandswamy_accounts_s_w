@@ -11,6 +11,13 @@ export interface AttachedDoc {
   size: number;
 }
 
+export interface Program {
+  id: number;
+  name: string;
+  color: string;
+  createdAt?: string;
+}
+
 export interface Transaction {
   id: string;
   date: string;
@@ -24,6 +31,8 @@ export interface Transaction {
   exchangeType?: "loan" | "credit";
   isCompleted?: boolean;
   isReminder?: boolean;
+  programId?: number | null;
+  programName?: string | null;
 }
 
 export interface Account {

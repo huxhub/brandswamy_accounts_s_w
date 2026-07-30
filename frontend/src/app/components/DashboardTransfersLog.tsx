@@ -1,7 +1,20 @@
+import { useState, useEffect } from "react";
 import { ArrowLeftRight } from "lucide-react";
 import { fmt } from "../types";
+import { Pagination } from "./ui/Pagination";
 
 export function DashboardTransfersLog({ interCompanyTransfers }: { interCompanyTransfers: any[] }) {
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [interCompanyTransfers.length]);
+
+  const totalPages = Math.ceil(interCompanyTransfers.length / pageSize);
+  const reversedList = [...interCompanyTransfers].reverse();
+  const paginatedList = reversedList.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
   return (
     <div className="bg-white rounded-2xl border border-border overflow-hidden">
       <div className="px-6 py-4 border-b border-border flex items-center justify-between bg-gray-50/50">
@@ -23,7 +36,7 @@ export function DashboardTransfersLog({ interCompanyTransfers }: { interCompanyT
       ) : (
         <>
           <div className="md:hidden flex flex-col divide-y divide-border/60">
-            {[...interCompanyTransfers].reverse().map(tx => (
+            {paginatedList.map(tx => (
               <div key={tx.id} className="p-4 flex flex-col gap-2 hover:bg-gray-50 transition-colors">
                 <div className="flex justify-between items-start gap-4">
                   <div className="min-w-0">
@@ -59,31 +72,42 @@ export function DashboardTransfersLog({ interCompanyTransfers }: { interCompanyT
                 </tr>
               </thead>
               <tbody>
-                {[...interCompanyTransfers].reverse().map((tx, idx) => (
-                  <tr key={tx.id} className="border-b border-border/60 hover:bg-gray-50 transition-colors">
-                    <td className="px-6 py-3.5 text-center font-mono text-xs text-muted-foreground">{idx + 1}</td>
-                    <td className="px-6 py-3.5 font-mono text-xs text-muted-foreground">{tx.date.split("-").reverse().join("/")}</td>
-                    <td className="px-6 py-3.5">
-                      <div className="flex items-center gap-2">
-                        <span className="inline-flex items-center gap-1.5 font-semibold text-foreground"><span className="w-2.5 h-2.5 rounded-full inline-block" style={{ backgroundColor: tx.fromColor }} />{tx.fromCompany || "Unknown"}</span>
-                        <span className="text-muted-foreground text-xs font-semibold px-1">➔</span>
-                        <span className="inline-flex items-center gap-1.5 font-semibold text-foreground"><span className="w-2.5 h-2.5 rounded-full inline-block" style={{ backgroundColor: tx.toColor }} />{tx.toCompany || "Unknown"}</span>
-                      </div>
-                      {tx.description && (<div className="text-xs text-muted-foreground mt-1 max-w-md truncate">{tx.description.replace(/^Inter-Company Transfer (to|from) [^—]+ — /, "").replace(/^Inter-Company Transfer (to|from) [^—]+$/, "")}</div>)}
-                    </td>
-                    <td className="px-6 py-3.5 font-mono text-xs text-muted-foreground">{tx.reference}</td>
-                    <td className="px-6 py-3.5 text-center">
-                      <span className={`text-[10px] px-2.5 py-0.5 rounded-full font-semibold capitalize inline-block ${tx.exchangeType === "loan" ? "bg-amber-100 text-amber-800" : "bg-blue-100 text-blue-800"}`}>{tx.exchangeType}</span>
-                    </td>
-                    <td className="px-6 py-3.5">
-                      {tx.dueDate ? (<span className="text-xs bg-purple-50 text-purple-700 px-2 py-0.5 rounded font-mono font-medium">{tx.dueDate.split("-").reverse().join("/")}</span>) : (<span className="text-muted-foreground/30 text-xs">—</span>)}
-                    </td>
-                    <td className="px-6 py-3.5 text-right font-mono font-bold text-slate-800">{fmt(tx.amount)}</td>
-                  </tr>
-                ))}
+                {paginatedList.map((tx, idx) => {
+                  const globalIdx = (currentPage - 1) * pageSize + idx + 1;
+                  return (
+                    <tr key={tx.id} className="border-b border-border/60 hover:bg-gray-50 transition-colors">
+                      <td className="px-6 py-3.5 text-center font-mono text-xs text-muted-foreground">{globalIdx}</td>
+                      <td className="px-6 py-3.5 font-mono text-xs text-muted-foreground">{tx.date.split("-").reverse().join("/")}</td>
+                      <td className="px-6 py-3.5">
+                        <div className="flex items-center gap-2">
+                          <span className="inline-flex items-center gap-1.5 font-semibold text-foreground"><span className="w-2.5 h-2.5 rounded-full inline-block" style={{ backgroundColor: tx.fromColor }} />{tx.fromCompany || "Unknown"}</span>
+                          <span className="text-muted-foreground text-xs font-semibold px-1">➔</span>
+                          <span className="inline-flex items-center gap-1.5 font-semibold text-foreground"><span className="w-2.5 h-2.5 rounded-full inline-block" style={{ backgroundColor: tx.toColor }} />{tx.toCompany || "Unknown"}</span>
+                        </div>
+                        {tx.description && (<div className="text-xs text-muted-foreground mt-1 max-w-md truncate">{tx.description.replace(/^Inter-Company Transfer (to|from) [^—]+ — /, "").replace(/^Inter-Company Transfer (to|from) [^—]+$/, "")}</div>)}
+                      </td>
+                      <td className="px-6 py-3.5 font-mono text-xs text-muted-foreground">{tx.reference}</td>
+                      <td className="px-6 py-3.5 text-center">
+                        <span className={`text-[10px] px-2.5 py-0.5 rounded-full font-semibold capitalize inline-block ${tx.exchangeType === "loan" ? "bg-amber-100 text-amber-800" : "bg-blue-100 text-blue-800"}`}>{tx.exchangeType}</span>
+                      </td>
+                      <td className="px-6 py-3.5">
+                        {tx.dueDate ? (<span className="text-xs bg-purple-50 text-purple-700 px-2 py-0.5 rounded font-mono font-medium">{tx.dueDate.split("-").reverse().join("/")}</span>) : (<span className="text-muted-foreground/30 text-xs">—</span>)}
+                      </td>
+                      <td className="px-6 py-3.5 text-right font-mono font-bold text-slate-800">{fmt(tx.amount)}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
+
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+            totalItems={interCompanyTransfers.length}
+            pageSize={pageSize}
+          />
         </>
       )}
     </div>

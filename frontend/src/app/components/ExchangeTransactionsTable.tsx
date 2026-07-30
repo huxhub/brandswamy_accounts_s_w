@@ -1,5 +1,7 @@
+import { useState, useEffect } from "react";
 import { ArrowLeftRight, Trash2 } from "lucide-react";
 import { fmt } from "../types";
+import { Pagination } from "./ui/Pagination";
 
 export function ExchangeTransactionsTable({
   exchangeTransactions,
@@ -8,7 +10,18 @@ export function ExchangeTransactionsTable({
   exchangeTransactions: any[];
   onDeleteTransaction: (txId: string) => void;
 }) {
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [exchangeTransactions.length]);
+
   if (exchangeTransactions.length === 0) return null;
+
+  const totalPages = Math.ceil(exchangeTransactions.length / pageSize);
+  const reversedList = [...exchangeTransactions].reverse();
+  const paginatedList = reversedList.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   return (
     <div className="bg-white rounded-xl border border-border overflow-hidden">
@@ -29,7 +42,7 @@ export function ExchangeTransactionsTable({
 
       {/* Mobile View */}
       <div className="md:hidden flex flex-col divide-y divide-border/60">
-        {[...exchangeTransactions].reverse().map((tx: any) => (
+        {paginatedList.map((tx: any) => (
           <div key={tx.id} className="p-5 flex flex-col gap-3 hover:bg-gray-50 transition-colors">
             <div className="flex justify-between items-start gap-4">
               <div className="min-w-0">
@@ -79,40 +92,51 @@ export function ExchangeTransactionsTable({
             </tr>
           </thead>
           <tbody>
-            {[...exchangeTransactions].reverse().map((tx: any, idx: number) => (
-              <tr key={tx.id} className="border-b border-border/60 hover:bg-gray-50 transition-colors group">
-                <td className="px-4 py-3 text-center font-mono text-xs text-muted-foreground">{idx + 1}</td>
-                <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{tx.date.split("-").reverse().join("/")}</td>
-                <td className="px-4 py-3 text-foreground font-medium">{tx.description}</td>
-                <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{tx.reference || "—"}</td>
-                <td className="px-4 py-3 text-center">
-                  {tx.isCompleted ? (
-                    <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">Completed</span>
-                  ) : (
-                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold capitalize inline-block ${tx.exchangeType === "loan" ? "bg-amber-100 text-amber-800" : "bg-blue-100 text-blue-800"}`}>{tx.exchangeType}</span>
-                  )}
-                </td>
-                <td className="px-4 py-3 text-left">
-                  {tx.dueDate ? (
-                    <span className="text-xs bg-purple-50 text-purple-700 px-2 py-0.5 rounded font-mono font-medium">
-                      {tx.dueDate.split("-").reverse().join("/")}
-                    </span>
-                  ) : (
-                    <span className="text-muted-foreground/30 text-xs">—</span>
-                  )}
-                </td>
-                <td className="px-4 py-3 text-right font-mono">{tx.type === "credit" && tx.amount > 0 ? <span className="text-emerald-600 font-semibold">{fmt(tx.amount)}</span> : <span className="text-muted-foreground/40">—</span>}</td>
-                <td className="px-4 py-3 text-right font-mono">{tx.type === "debit" && tx.amount > 0 ? <span className="text-red-500 font-semibold">{fmt(tx.amount)}</span> : <span className="text-muted-foreground/40">—</span>}</td>
-                <td className="px-4 py-3 text-center">
-                  <button onClick={() => onDeleteTransaction(tx.id)} className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-red-500 transition-all">
-                    <Trash2 size={13} />
-                  </button>
-                </td>
-              </tr>
-            ))}
+            {paginatedList.map((tx: any, idx: number) => {
+              const globalIdx = (currentPage - 1) * pageSize + idx + 1;
+              return (
+                <tr key={tx.id} className="border-b border-border/60 hover:bg-gray-50 transition-colors group">
+                  <td className="px-4 py-3 text-center font-mono text-xs text-muted-foreground">{globalIdx}</td>
+                  <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{tx.date.split("-").reverse().join("/")}</td>
+                  <td className="px-4 py-3 text-foreground font-medium">{tx.description}</td>
+                  <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{tx.reference || "—"}</td>
+                  <td className="px-4 py-3 text-center">
+                    {tx.isCompleted ? (
+                      <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">Completed</span>
+                    ) : (
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold capitalize inline-block ${tx.exchangeType === "loan" ? "bg-amber-100 text-amber-800" : "bg-blue-100 text-blue-800"}`}>{tx.exchangeType}</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-left">
+                    {tx.dueDate ? (
+                      <span className="text-xs bg-purple-50 text-purple-700 px-2 py-0.5 rounded font-mono font-medium">
+                        {tx.dueDate.split("-").reverse().join("/")}
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground/30 text-xs">—</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-right font-mono">{tx.type === "credit" && tx.amount > 0 ? <span className="text-emerald-600 font-semibold">{fmt(tx.amount)}</span> : <span className="text-muted-foreground/40">—</span>}</td>
+                  <td className="px-4 py-3 text-right font-mono">{tx.type === "debit" && tx.amount > 0 ? <span className="text-red-500 font-semibold">{fmt(tx.amount)}</span> : <span className="text-muted-foreground/40">—</span>}</td>
+                  <td className="px-4 py-3 text-center">
+                    <button onClick={() => onDeleteTransaction(tx.id)} className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-red-500 transition-all" title="Delete Entry">
+                      <Trash2 size={13} />
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
+
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        onPageChange={setCurrentPage}
+        totalItems={exchangeTransactions.length}
+        pageSize={pageSize}
+      />
     </div>
   );
 }

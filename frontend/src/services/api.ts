@@ -71,4 +71,49 @@ export const accountService = {
 
   updateTransaction: (accountId: string, txId: string, transaction: any) =>
     request(`/${accountId}/transactions/${txId}`, { method: 'PUT', body: JSON.stringify(transaction) }),
+
+  getHistory: (params: { startDate?: string; endDate?: string; month?: string; accountId?: string; type?: string }) => {
+    const searchParams = new URLSearchParams();
+    Object.entries(params).forEach(([key, value]) => {
+      if (value) searchParams.set(key, value);
+    });
+    const qs = searchParams.toString();
+    return request(`/history${qs ? `?${qs}` : ''}`);
+  },
+};
+
+async function requestProgram<T = any>(path: string, options: RequestInit = {}): Promise<T> {
+  let response: Response;
+  const mergedHeaders = getHeaders((options.headers as Record<string, string>) || {});
+  try {
+    response = await fetch(`${API_BASE_URL}/api/programs${path}`, {
+      credentials: 'include',
+      ...options,
+      headers: mergedHeaders,
+    });
+  } catch {
+    throw new Error('Unable to reach the server. Check your connection and try again.');
+  }
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      authService.logout();
+    }
+    let message = `Request failed (${response.status})`;
+    try {
+      const data = await response.json();
+      if (data?.message) message = data.message;
+    } catch {}
+    throw new Error(message);
+  }
+
+  return response.json();
+}
+
+export const programService = {
+  getPrograms: () => requestProgram(''),
+  createProgram: (data: { name: string; color?: string }) =>
+    requestProgram('', { method: 'POST', body: JSON.stringify(data) }),
+  deleteProgram: (id: number | string) =>
+    requestProgram(`/${id}`, { method: 'DELETE' }),
 };

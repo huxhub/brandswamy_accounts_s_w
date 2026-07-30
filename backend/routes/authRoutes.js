@@ -13,6 +13,7 @@ const authLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { message: 'Too many attempts, please try again later' },
+  validate: { trustProxy: false },
 });
 
 // Only an existing admin can create new logins for this app.

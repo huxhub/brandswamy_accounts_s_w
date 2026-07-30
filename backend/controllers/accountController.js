@@ -1,6 +1,8 @@
+import { Op } from 'sequelize';
 import Account from '../models/Account.js';
 import Transaction from '../models/Transaction.js';
 import User from '../models/User.js';
+import Program from '../models/Program.js';
 
 const formatTransaction = (tx) => ({
   id: tx.id,
@@ -15,6 +17,8 @@ const formatTransaction = (tx) => ({
   exchangeType: tx.exchangeType,
   isCompleted: Boolean(tx.isCompleted),
   isReminder: Boolean(tx.isReminder),
+  programId: tx.programId || null,
+  programName: tx.Program?.name || null,
   createdAt: tx.createdAt,
 });
 
@@ -23,7 +27,7 @@ const formatTransaction = (tx) => ({
 export const getAccounts = async (req, res) => {
   try {
     const accounts = await Account.findAll({
-      include: [{ model: Transaction }],
+      include: [{ model: Transaction, include: [{ model: Program, attributes: ['id', 'name'] }] }],
     });
 
     const formattedAccounts = accounts.map((acc) => ({
@@ -114,7 +118,7 @@ export const updateOpeningBalance = async (req, res) => {
 // @route   POST /api/accounts/:id/transactions
 export const addTransaction = async (req, res) => {
   try {
-    const { date, description, type, amount, reference, document, dueDate, exchangeType, isReminder } = req.body;
+    const { date, description, type, amount, reference, document, dueDate, exchangeType, isReminder, programId } = req.body;
     const account = await Account.findByPk(req.params.id);
 
     if (account) {
@@ -130,6 +134,7 @@ export const addTransaction = async (req, res) => {
         dueDate,
         exchangeType,
         isReminder: Boolean(isReminder),
+        programId: programId ? Number(programId) : null,
       });
 
       res.status(201).json(formatTransaction(transaction));
@@ -162,7 +167,7 @@ export const deleteTransaction = async (req, res) => {
 // @route   PUT /api/accounts/:id/transactions/:txId
 export const updateTransaction = async (req, res) => {
   try {
-    const { date, description, type, amount, reference, document, dueDate, exchangeType, isCompleted, isReminder } = req.body;
+    const { date, description, type, amount, reference, document, dueDate, exchangeType, isCompleted, isReminder, programId } = req.body;
     const transaction = await Transaction.findByPk(req.params.txId);
 
     if (transaction) {
@@ -176,6 +181,7 @@ export const updateTransaction = async (req, res) => {
       if (exchangeType !== undefined) transaction.exchangeType = exchangeType;
       if (isCompleted !== undefined) transaction.isCompleted = isCompleted;
       if (isReminder !== undefined) transaction.isReminder = isReminder;
+      if (programId !== undefined) transaction.programId = programId ? Number(programId) : null;
 
       await transaction.save();
       res.json(formatTransaction(transaction));
@@ -250,6 +256,116 @@ export const deleteAccount = async (req, res) => {
     await account.destroy();
 
     res.json({ message: 'Account and associated transactions removed successfully' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Get all transactions across all accounts with filters + financial summary
+// @route   GET /api/accounts/history
+export const getHistory = async (req, res) => {
+  try {
+    const { startDate, endDate, month, accountId, type, programId } = req.query;
+
+    // Build WHERE clause for Transaction
+    const txWhere = {};
+
+    // Date filtering — the date column stores strings as 'YYYY-MM-DD'
+    if (month) {
+      // e.g. month = '2026-07'
+      txWhere.date = { [Op.like]: `${month}%` };
+    } else if (startDate && endDate) {
+      txWhere.date = { [Op.between]: [startDate, endDate] };
+    } else if (startDate) {
+      txWhere.date = { [Op.gte]: startDate };
+    } else if (endDate) {
+      txWhere.date = { [Op.lte]: endDate };
+    }
+
+    if (accountId) {
+      txWhere.accountId = accountId;
+    }
+
+    if (type && (type === 'credit' || type === 'debit')) {
+      txWhere.type = type;
+    }
+
+    if (programId) {
+      txWhere.programId = programId;
+    }
+
+    // Fetch transactions with their parent account and program
+    const transactions = await Transaction.findAll({
+      where: txWhere,
+      include: [
+        { model: Account, attributes: ['id', 'name', 'type', 'color', 'bgColor', 'openingBalance'] },
+        { model: Program, attributes: ['id', 'name'] },
+      ],
+      order: [['date', 'DESC'], ['createdAt', 'DESC']],
+    });
+
+    // Format response
+    const formattedTxs = transactions.map((tx) => ({
+      ...formatTransaction(tx),
+      accountId: tx.accountId,
+      accountName: tx.Account?.name || '',
+      accountType: tx.Account?.type || '',
+      accountColor: tx.Account?.color || '#1e3a5f',
+      accountBgColor: tx.Account?.bgColor || '#e8edf5',
+    }));
+
+    // Build per-account summary
+    const accountMap = {};
+    const allAccounts = await Account.findAll();
+
+    for (const acc of allAccounts) {
+      accountMap[acc.id] = {
+        accountId: acc.id,
+        name: acc.name,
+        type: acc.type,
+        color: acc.color,
+        bgColor: acc.bgColor,
+        openingBalance: acc.openingBalance,
+        credits: 0,
+        debits: 0,
+        balance: 0,
+      };
+    }
+
+    let totalCredits = 0;
+    let totalDebits = 0;
+
+    for (const tx of transactions) {
+      const entry = accountMap[tx.accountId];
+      if (!entry) continue;
+      if (tx.type === 'credit') {
+        entry.credits += tx.amount;
+        totalCredits += tx.amount;
+      } else {
+        entry.debits += tx.amount;
+        totalDebits += tx.amount;
+      }
+    }
+
+    // Compute balance per account
+    for (const key of Object.keys(accountMap)) {
+      const entry = accountMap[key];
+      entry.balance = entry.openingBalance + entry.credits - entry.debits;
+    }
+
+    const totalOpeningBalance = allAccounts.reduce((s, a) => s + a.openingBalance, 0);
+
+    res.json({
+      transactions: formattedTxs,
+      summary: {
+        totalCredits,
+        totalDebits,
+        netBalance: totalCredits - totalDebits,
+        totalOpeningBalance,
+        totalClosingBalance: totalOpeningBalance + totalCredits - totalDebits,
+        byAccount: Object.values(accountMap),
+      },
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

@@ -1,10 +1,10 @@
 import { useMemo } from "react";
-import { TrendingUp, TrendingDown, ChevronRight, ArrowUpRight, ArrowDownRight, Wallet, Activity } from "lucide-react";
-import type { Account } from "../types";
-import { calcBalance, calcTotalCredit, calcTotalDebit, fmtSign, accountTypeIcon, CHART_COLORS } from "../types";
+import { TrendingUp, TrendingDown, ChevronRight, ArrowUpRight, ArrowDownRight, Wallet, Activity, Tag } from "lucide-react";
+import type { Account, Program } from "../types";
+import { calcBalance, calcTotalCredit, calcTotalDebit, fmtSign, accountTypeIcon, CHART_COLORS, fmt } from "../types";
 import { DashboardTransfersLog } from "./DashboardTransfersLog";
 
-export function Dashboard({ accounts, onNavigate }: { accounts: Account[]; onNavigate: (id: string) => void }) {
+export function Dashboard({ accounts, programs = [], onNavigate }: { accounts: Account[]; programs?: Program[]; onNavigate: (id: string) => void }) {
   const totalOpening = accounts.reduce((s, a) => s + a.openingBalance, 0);
   const totalCredit = accounts.reduce((s, a) => s + calcTotalCredit(a), 0);
   const totalDebit = accounts.reduce((s, a) => s + calcTotalDebit(a), 0);
@@ -43,6 +43,31 @@ export function Dashboard({ accounts, onNavigate }: { accounts: Account[]; onNav
     .sort((a, b) => b.date.localeCompare(a.date))
     .slice(0, 8);
 
+  const programSummaries = useMemo(() => {
+    if (!programs || programs.length === 0) return [];
+    const map = new Map<number, { id: number; name: string; color: string; credit: number; debit: number; net: number; count: number }>();
+    programs.forEach(p => {
+      map.set(p.id, { id: p.id, name: p.name, color: p.color, credit: 0, debit: 0, net: 0, count: 0 });
+    });
+
+    accounts.forEach(acc => {
+      (acc.transactions || []).forEach((tx: any) => {
+        if (tx.programId && map.has(Number(tx.programId))) {
+          const item = map.get(Number(tx.programId))!;
+          item.count += 1;
+          if (tx.type === "credit") {
+            item.credit += tx.amount;
+          } else {
+            item.debit += tx.amount;
+          }
+          item.net = item.credit - item.debit;
+        }
+      });
+    });
+
+    return Array.from(map.values());
+  }, [accounts, programs]);
+
   const kpis = [
     { label: "Opening Balance", value: fmtSign(totalOpening), icon: Wallet, bg: "bg-blue-50", iconColor: "text-blue-600", border: "border-blue-100", valueColor: "text-blue-700" },
     { label: "Total Credits", value: `+${fmtSign(totalCredit)}`, icon: TrendingUp, bg: "bg-emerald-50", iconColor: "text-emerald-600", border: "border-emerald-100", valueColor: "text-emerald-700" },
@@ -59,20 +84,64 @@ export function Dashboard({ accounts, onNavigate }: { accounts: Account[]; onNav
         </div>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
         {kpis.map(kpi => (
-          <div key={kpi.label} className={`bg-white rounded-xl sm:rounded-2xl border ${kpi.border} p-3 sm:p-5 flex flex-col gap-2 sm:gap-3`}>
-            <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl ${kpi.bg} flex items-center justify-center`}>
+          <div key={kpi.label} className={`bg-white rounded-xl sm:rounded-2xl border ${kpi.border} p-4 sm:p-5 flex flex-col justify-between gap-3 shadow-2xs hover:shadow-xs transition-all`}>
+            <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl ${kpi.bg} flex items-center justify-center`}>
               <kpi.icon size={16} className={`sm:hidden ${kpi.iconColor}`} />
               <kpi.icon size={18} className={`hidden sm:block ${kpi.iconColor}`} />
             </div>
             <div>
-              <div className="text-[10px] sm:text-xs text-muted-foreground mb-0.5 sm:mb-1">{kpi.label}</div>
+              <div className="text-[10px] sm:text-xs text-muted-foreground mb-1 font-medium">{kpi.label}</div>
               <div className={`text-sm sm:text-lg font-mono font-bold leading-tight truncate ${kpi.valueColor}`}>{kpi.value}</div>
             </div>
           </div>
         ))}
       </div>
+
+      {/* Program Summary Section */}
+      {programSummaries.length > 0 && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="font-semibold text-sm text-foreground flex items-center gap-1.5">
+              <Tag size={15} className="text-indigo-600" /> Program Financial Summary
+            </h3>
+            <span className="text-xs text-muted-foreground font-medium">{programSummaries.length} Programs</span>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+            {programSummaries.map(prog => (
+              <div key={prog.id} className="bg-white rounded-xl border border-border p-4 space-y-2 shadow-2xs hover:shadow-xs transition-all">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: prog.color }} />
+                    <span className="text-sm font-bold text-foreground truncate max-w-[150px]">{prog.name}</span>
+                  </div>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 font-mono text-slate-600">
+                    {prog.count} txns
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-3 gap-2 text-center pt-2 border-t border-slate-100">
+                  <div>
+                    <div className="text-[10px] text-muted-foreground">Credited</div>
+                    <div className="text-xs font-mono font-semibold text-emerald-600">+₹{fmt(prog.credit)}</div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] text-muted-foreground">Debited</div>
+                    <div className="text-xs font-mono font-semibold text-red-500">-₹{fmt(prog.debit)}</div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] text-muted-foreground">Net Cash</div>
+                    <div className={`text-xs font-mono font-bold ${prog.net >= 0 ? "text-indigo-600" : "text-red-600"}`}>
+                      {fmtSign(prog.net)}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="space-y-3">
         <h3 className="font-semibold text-sm text-foreground">Company Balances</h3>

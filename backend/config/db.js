@@ -86,6 +86,17 @@ const connectDB = async () => {
           'ALTER TABLE `Transactions` ADD COLUMN `isReminder` TINYINT(1) NOT NULL DEFAULT 0'
         );
       }
+
+      const [progColumns] = await sequelize.query(
+        `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+         WHERE LOWER(TABLE_SCHEMA) = LOWER(?) AND LOWER(TABLE_NAME) = LOWER('Transactions') AND LOWER(COLUMN_NAME) = LOWER('programId')`,
+        { replacements: [dbName] }
+      );
+      if (progColumns.length === 0) {
+        await sequelize.query(
+          'ALTER TABLE `Transactions` ADD COLUMN `programId` INT NULL'
+        );
+      }
     } catch {
       // Transactions table doesn't exist yet on first boot
     }

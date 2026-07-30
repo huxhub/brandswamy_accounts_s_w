@@ -21,7 +21,7 @@ const PORT = process.env.PORT || 3001;
 
 // Behind a reverse proxy (Render, nginx, etc.) so rate limiting and secure
 // cookies see the real client IP/protocol instead of the proxy's.
-app.set('trust proxy', true);
+app.set('trust proxy', 1);
 
 const defaultOrigins = [
   'http://localhost:5173',
@@ -96,14 +96,17 @@ app.use('/api', rateLimit({
   limit: 300,
   standardHeaders: true,
   legacyHeaders: false,
+  validate: { trustProxy: false },
 }));
 
 import authRoutes from './routes/authRoutes.js';
+import programRoutes from './routes/programRoutes.js';
 import { protect } from './middleware/authMiddleware.js';
 
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/accounts', protect, accountRoutes);
+app.use('/api/programs', protect, programRoutes);
 
 // Basic Route
 app.get('/', (req, res) => {

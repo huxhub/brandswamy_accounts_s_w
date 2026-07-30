@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAccountsController } from "../controllers/useAccountsController";
 
 import Login from "./Login";
 import { Toaster } from "./components/ui/sonner";
+import { toast } from "sonner";
 import { Header } from "./components/Header";
 import { Sidebar } from "./components/Sidebar";
 import { Dashboard } from "./components/Dashboard";
@@ -10,6 +11,8 @@ import { RemindersPage } from "./components/RemindersPage";
 import { AccountDetail } from "./components/AccountDetail";
 import { DashboardSkeleton } from "./components/DashboardSkeleton";
 import { AccountDetailsSkeleton } from "./components/AccountDetailsSkeleton";
+import { HistoryPage } from "./components/HistoryPage";
+import { HistorySkeleton } from "./components/HistorySkeleton";
 import { ReportModal } from "./components/modals/ReportModal";
 import { DocumentViewerModal } from "./components/modals/DocumentViewerModal";
 import { AddAccountModal } from "./components/modals/AddAccountModal";
@@ -17,13 +20,15 @@ import { AddTransactionModal } from "./components/modals/AddTransactionModal";
 import { ExchangeModal } from "./components/modals/ExchangeModal";
 import { DeleteAccountModal, DeleteTxModal, CompleteReminderModal } from "./components/modals/DeleteConfirmModals";
 import { SettingsModal } from "./components/modals/SettingsModal";
+import { ProgramModal } from "./components/modals/ProgramModal";
 
 import { useAuth } from "./hooks/useAuth";
 import { useSettings } from "./hooks/useSettings";
 import { useTransactionForm } from "./hooks/useTransactionForm";
 import { useExchangeForm } from "./hooks/useExchangeForm";
 import { useAccountDetail } from "./hooks/useAccountDetail";
-import type { AttachedDoc } from "./types";
+import { programService } from "../services/api";
+import type { AttachedDoc, Program } from "./types";
 
 export default function App() {
   const { isAuthenticated, setIsAuthenticated, authChecked, handleLogout } = useAuth();
@@ -36,20 +41,56 @@ export default function App() {
   const [viewDoc, setViewDoc] = useState<AttachedDoc | null>(null);
   const [showCompleteModal, setShowCompleteModal] = useState<boolean>(false);
   const [reminderToComplete, setReminderToComplete] = useState<{ accountId: string; txId: string; description?: string } | null>(null);
+  const [programs, setPrograms] = useState<Program[]>([]);
+  const [showPrograms, setShowPrograms] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      programService.getPrograms()
+        .then(setPrograms)
+        .catch(() => {});
+    } else {
+      setPrograms([]);
+    }
+  }, [isAuthenticated]);
+
+  const handleAddProgram = async (name: string, color: string) => {
+    try {
+      const newProgram = await programService.createProgram({ name, color });
+      setPrograms(prev => [...prev, newProgram]);
+      toast.success(`Program "${newProgram.name}" added`);
+      return true;
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to create program");
+      return false;
+    }
+  };
+
+  const handleDeleteProgram = async (id: number) => {
+    try {
+      await programService.deleteProgram(id);
+      setPrograms(prev => prev.filter(p => p.id !== id));
+      toast.success("Program deleted");
+      return true;
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to delete program");
+      return false;
+    }
+  };
 
   const txForm = useTransactionForm(accounts, activeTab, handleAddTx, handleDelTx, handleEditTx);
   const exForm = useExchangeForm(accounts, handleAddTx, handleDelTx);
   const accDetail = useAccountDetail(accounts, activeTab, handleAddAccount, handleDeleteAccount, handleSaveBal, editAccountName, setActiveTab);
 
   const handleCompleteReminder = async (accountId: string, txId: string) => {
-    const targetAcc = accounts.find(a => a.id === accountId);
-    const targetTx = targetAcc?.transactions.find(t => t.id === txId);
+    const targetAcc = accounts.find((a: any) => a.id === accountId);
+    const targetTx = targetAcc?.transactions.find((t: any) => t.id === txId);
 
     await handleEditTx(accountId, txId, { isCompleted: true });
 
     if (targetTx?.reference) {
-      accounts.forEach(acc => {
-        (acc.transactions || []).forEach(tx => {
+      accounts.forEach((acc: any) => {
+        (acc.transactions || []).forEach((tx: any) => {
           if (tx.reference === targetTx.reference && (tx.id !== txId || acc.id !== accountId)) {
             handleEditTx(acc.id, tx.id, { isCompleted: true });
           }
@@ -95,6 +136,7 @@ export default function App() {
         setMobileMenuOpen={setMobileMenuOpen}
         onOpenExchange={exForm.openExchangeModal}
         onOpenReport={() => setShowReport(true)}
+        onOpenPrograms={() => setShowPrograms(true)}
       />
 
       <div className="flex flex-1 overflow-hidden relative">
@@ -116,11 +158,13 @@ export default function App() {
 
         <main className="flex-1 overflow-y-auto">
           {loading ? (
-            activeTab === "dashboard" ? <DashboardSkeleton /> : <AccountDetailsSkeleton />
+            activeTab === "dashboard" ? <DashboardSkeleton /> : activeTab === "history" ? <HistorySkeleton /> : <AccountDetailsSkeleton />
           ) : activeTab === "dashboard" ? (
-            <Dashboard accounts={accounts} onNavigate={setActiveTab} />
+            <Dashboard accounts={accounts} programs={programs} onNavigate={setActiveTab} />
           ) : activeTab === "reminders" ? (
             <RemindersPage accounts={accounts} onNavigate={setActiveTab} onAddTransaction={handleAddTx} onDeleteTransaction={txForm.deleteTransaction} onCompleteReminder={promptCompleteReminder} />
+          ) : activeTab === "history" ? (
+            <HistoryPage accounts={accounts} programs={programs} onViewDoc={doc => setViewDoc(doc)} />
           ) : accDetail.activeAccount ? (
             <AccountDetail
               activeAccount={accDetail.activeAccount}
@@ -160,12 +204,13 @@ export default function App() {
       <ReportModal accounts={accounts} showReport={showReport} setShowReport={setShowReport} />
       <DocumentViewerModal viewDoc={viewDoc} setViewDoc={setViewDoc} />
       <AddAccountModal showAddCompany={accDetail.showAddCompany} setShowAddCompany={accDetail.setShowAddCompany} companyForm={accDetail.companyForm} setCompanyForm={accDetail.setCompanyForm} addCompany={accDetail.addCompany} />
-      <AddTransactionModal showForm={txForm.showForm} setShowForm={txForm.setShowForm} activeAccount={accDetail.activeAccount} accounts={accounts} form={txForm.form} setForm={txForm.setForm} fileInputRef={txForm.fileInputRef} handleFileSelect={txForm.handleFileSelect} addTransaction={txForm.addTransaction} editingTxId={txForm.editingTxId} />
+      <AddTransactionModal showForm={txForm.showForm} setShowForm={txForm.setShowForm} activeAccount={accDetail.activeAccount} accounts={accounts} form={txForm.form} setForm={txForm.setForm} fileInputRef={txForm.fileInputRef} handleFileSelect={txForm.handleFileSelect} addTransaction={txForm.addTransaction} editingTxId={txForm.editingTxId} programs={programs} />
       <ExchangeModal showExchange={exForm.showExchange} setShowExchange={exForm.setShowExchange} exchangeForm={exForm.exchangeForm} setExchangeForm={exForm.setExchangeForm} accounts={accounts} handleExchangeSubmit={exForm.handleExchangeSubmit} />
       <DeleteAccountModal showDeleteDialog={accDetail.showDeleteDialog} setShowDeleteDialog={accDetail.setShowDeleteDialog} activeAccount={accDetail.activeAccount} deleteConfirmPassword={accDetail.deleteConfirmPassword} setDeleteConfirmPassword={accDetail.setDeleteConfirmPassword} deleteError={accDetail.deleteError} handleDeleteCompany={accDetail.handleDeleteCompany} />
       <DeleteTxModal showDeleteTxDialog={txForm.showDeleteTxDialog} setShowDeleteTxDialog={txForm.setShowDeleteTxDialog} txToDelete={txForm.txToDelete} setTxToDelete={txForm.setTxToDelete} handleDelTx={handleDelTx} />
       <CompleteReminderModal showCompleteModal={showCompleteModal} setShowCompleteModal={setShowCompleteModal} reminderToComplete={reminderToComplete} onConfirmComplete={handleCompleteReminder} />
       <SettingsModal showSettings={showSettings} setShowSettings={setShowSettings} settings={settings} setSettings={setSettings} tempSettings={tempSettings} setTempSettings={setTempSettings} />
+      <ProgramModal showPrograms={showPrograms} setShowPrograms={setShowPrograms} programs={programs} onAddProgram={handleAddProgram} onDeleteProgram={handleDeleteProgram} />
     </div>
   );
 }

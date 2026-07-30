@@ -1,4 +1,4 @@
-import { LayoutDashboard, Bell, Building2, Landmark, CreditCard, Plus, ChevronRight, Settings, LogOut } from "lucide-react";
+import { LayoutDashboard, Bell, Clock, Building2, Landmark, CreditCard, Plus, ChevronRight, Settings, LogOut } from "lucide-react";
 import type { Account } from "../types";
 import { calcBalance, fmtSign, accountTypeIcon } from "../types";
 
@@ -109,6 +109,18 @@ export function Sidebar({
                   {activeRemindersCount}
                 </span>
               )}
+            </button>
+
+            <button
+              onClick={() => navTo("history")}
+              className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-bold transition-all ${
+                activeTab === "history"
+                  ? "bg-red-50/70 text-red-600 border-l-4 border-l-red-600"
+                  : "text-slate-700 hover:bg-slate-50"
+              }`}
+            >
+              <Clock size={18} className={activeTab === "history" ? "text-red-600" : "text-slate-500"} />
+              <span>Transaction Summary</span>
             </button>
           </div>
 
