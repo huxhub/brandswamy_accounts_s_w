@@ -1,4 +1,4 @@
-import { LayoutDashboard, Bell, Clock, Building2, Landmark, CreditCard, Plus, ChevronRight, Settings, LogOut } from "lucide-react";
+import { LayoutDashboard, Bell, History, Building2, Landmark, CreditCard, Plus, ChevronRight, Settings, LogOut } from "lucide-react";
 import type { Account } from "../types";
 import { calcBalance, fmtSign, accountTypeIcon } from "../types";
 
@@ -88,8 +88,8 @@ export function Sidebar({
                   : "text-slate-700 hover:bg-slate-50"
               }`}
             >
-              <LayoutDashboard size={18} className={activeTab === "dashboard" ? "text-red-600" : "text-slate-500"} />
-              <span>Dashboard</span>
+              <LayoutDashboard size={18} className={`flex-shrink-0 ${activeTab === "dashboard" ? "text-red-600" : "text-slate-500"}`} />
+              <span className="whitespace-nowrap truncate">Dashboard</span>
             </button>
 
             <button
@@ -100,12 +100,12 @@ export function Sidebar({
                   : "text-slate-700 hover:bg-slate-50"
               }`}
             >
-              <div className="flex items-center gap-3">
-                <Bell size={18} className={activeTab === "reminders" ? "text-red-600" : "text-slate-500"} />
-                <span className={activeTab === "reminders" ? "text-red-600" : "text-slate-700"}>Reminders</span>
+              <div className="flex items-center gap-3 min-w-0">
+                <Bell size={18} className={`flex-shrink-0 ${activeTab === "reminders" ? "text-red-600" : "text-slate-500"}`} />
+                <span className={`whitespace-nowrap truncate ${activeTab === "reminders" ? "text-red-600" : "text-slate-700"}`}>Reminders</span>
               </div>
               {activeRemindersCount > 0 && (
-                <span className="w-5 h-5 rounded-full bg-[#f87171] text-white text-xs font-bold flex items-center justify-center shadow-2xs">
+                <span className="w-5 h-5 rounded-full bg-[#f87171] text-white text-xs font-bold flex items-center justify-center flex-shrink-0 shadow-2xs">
                   {activeRemindersCount}
                 </span>
               )}
@@ -119,8 +119,8 @@ export function Sidebar({
                   : "text-slate-700 hover:bg-slate-50"
               }`}
             >
-              <Clock size={18} className={activeTab === "history" ? "text-red-600" : "text-slate-500"} />
-              <span>Transaction Summary</span>
+              <History size={18} className={`flex-shrink-0 ${activeTab === "history" ? "text-red-600" : "text-slate-500"}`} />
+              <span className="whitespace-nowrap truncate">Transaction Summary</span>
             </button>
           </div>
 
