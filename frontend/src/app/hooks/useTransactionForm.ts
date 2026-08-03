@@ -88,7 +88,7 @@ export function useTransactionForm(
     if (!activeAccount) return;
 
     const isCompanyOrOD = activeAccount.type === "company" || activeAccount.type === "overdraft";
-    const selectedBank = isCompanyOrOD && form.paymentMode === "bank"
+    const selectedBank = isCompanyOrOD && form.paymentMode === "bank" && String(form.selectedBankId) !== String(activeAccount.id)
       ? findAccountById(accounts, form.selectedBankId)
       : null;
 
@@ -112,7 +112,7 @@ export function useTransactionForm(
       result = await handleEditTx(activeTab, editingTxId, tx);
     } else {
       result = await handleAddTx(activeTab, tx);
-      if (result && isCompanyOrOD && form.paymentMode === "bank" && selectedBank) {
+      if (result && isCompanyOrOD && form.paymentMode === "bank" && selectedBank && String(selectedBank.id) !== String(activeAccount.id)) {
         const bankTx = {
           date: form.date,
           description: `${activeAccount.name}: ${form.description}`,

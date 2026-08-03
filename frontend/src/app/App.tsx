@@ -187,7 +187,7 @@ export default function App() {
               setEditingOpening={accDetail.setEditingOpening}
               saveOpeningBalance={accDetail.saveOpeningBalance}
               onOpenAddEntry={() => {
-                const banks = accounts.filter(a => a.type === "bank" || a.type === "overdraft");
+                const banks = accounts.filter(a => a.type === "bank");
                 txForm.setForm((f: any) => ({ ...f, paymentMode: "cash", selectedBankId: banks.length > 0 ? String(banks[0].id) : "" }));
                 txForm.setShowForm(true);
               }}

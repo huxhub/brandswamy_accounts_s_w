@@ -55,7 +55,7 @@ export function AddTransactionModal({
             <div>
               <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide block mb-1.5">Select Bank Account</label>
               <select value={form.selectedBankId} onChange={e => setForm((f: any) => ({ ...f, selectedBankId: e.target.value }))} className="w-full border border-border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent/30 bg-input-background">
-                {accounts.filter(a => a.type === "bank" || a.type === "overdraft").map(acc => (
+                {accounts.filter(a => a.type === "bank").map(acc => (
                   <option key={acc.id} value={acc.id}>{acc.name} ({fmt(calcBalance(acc))})</option>
                 ))}
               </select>
