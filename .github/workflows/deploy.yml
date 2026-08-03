@@ -1,0 +1,81 @@
+name: CI/CD Pipeline - DigitalOcean Deployment
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build-and-verify:
+    name: Build & Verify
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: |
+          npm install
+          npm run install-all
+
+      - name: Build Frontend
+        run: |
+          npm run build --prefix frontend
+
+  deploy:
+    name: Deploy to DigitalOcean Droplet
+    needs: build-and-verify
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: SSH and Deploy to DigitalOcean
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DROPLET_HOST }}
+          username: ${{ secrets.DROPLET_USER }}
+          key: ${{ secrets.DROPLET_SSH_KEY }}
+          port: ${{ secrets.DROPLET_PORT || 22 }}
+          script: |
+            set -e
+            echo "🚀 Starting deployment on DigitalOcean Droplet..."
+            
+            PROJECT_DIR="${{ secrets.PROJECT_PATH || '/var/www/brandswamy_accounts_s_w' }}"
+            
+            if [ ! -d "$PROJECT_DIR" ]; then
+              echo "Directory $PROJECT_DIR does not exist. Cloning repository..."
+              mkdir -p $(dirname "$PROJECT_DIR")
+              git clone https://github.com/huxhub/brandswamy_accounts_s_w.git "$PROJECT_DIR"
+            fi
+            
+            cd "$PROJECT_DIR"
+            
+            echo "📥 Fetching latest code..."
+            git fetch origin main
+            git reset --hard origin/main
+            
+            echo "📦 Installing Dependencies..."
+            npm install
+            npm run install-all
+            
+            echo "🛠️ Building Frontend..."
+            npm run build --prefix frontend
+            
+            echo "🔄 Reloading Application via PM2..."
+            if command -v pm2 &> /dev/null; then
+              pm2 reload ecosystem.config.cjs --env production || pm2 start ecosystem.config.cjs --env production
+              pm2 save
+            else
+              echo "⚠️ PM2 is not installed on the server. Please install PM2 using 'npm install -g pm2'."
+              exit 1
+            fi
+            
+            echo "🎉 Deployment completed successfully!"
