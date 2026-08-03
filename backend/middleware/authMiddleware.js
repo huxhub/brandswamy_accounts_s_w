@@ -2,9 +2,10 @@ import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 
 export const protect = async (req, res, next) => {
-  // Prefer the httpOnly cookie; fall back to a Bearer header for non-browser API clients.
-  const token = req.cookies?.token ||
-    (req.headers.authorization?.startsWith('Bearer') ? req.headers.authorization.split(' ')[1] : null);
+  // Prefer explicit Authorization: Bearer header first; fall back to httpOnly cookie.
+  const authHeader = req.headers.authorization;
+  const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
+  const token = bearerToken || req.cookies?.token;
 
   if (!token) {
     return res.status(401).json({ message: 'Not authorized, no token' });

@@ -160,7 +160,7 @@ export default function App() {
           {loading ? (
             activeTab === "dashboard" ? <DashboardSkeleton /> : activeTab === "history" ? <HistorySkeleton /> : <AccountDetailsSkeleton />
           ) : activeTab === "dashboard" ? (
-            <Dashboard accounts={accounts} programs={programs} onNavigate={setActiveTab} />
+            <Dashboard accounts={accounts} programs={programs} onNavigate={setActiveTab} onCompleteReminder={promptCompleteReminder} />
           ) : activeTab === "reminders" ? (
             <RemindersPage accounts={accounts} onNavigate={setActiveTab} onAddTransaction={handleAddTx} onDeleteTransaction={txForm.deleteTransaction} onCompleteReminder={promptCompleteReminder} />
           ) : activeTab === "history" ? (

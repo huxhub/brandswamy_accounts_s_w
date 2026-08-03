@@ -117,9 +117,15 @@ export function AccountDetail({
           {activeAccountReminders.map((rem: any) => {
             const todayStr = new Date().toISOString().split("T")[0];
             const isOverdue = rem.dueDate < todayStr;
+            const isDueToday = rem.dueDate === todayStr;
             const diffTime = new Date(rem.dueDate).getTime() - new Date(todayStr).getTime();
             const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-            const statusText = isOverdue ? `Overdue by ${Math.abs(diffDays)} days` : "Due Today";
+            const statusText = isOverdue ? `Overdue by ${Math.abs(diffDays)} days` : isDueToday ? "Due Today" : `Due in ${diffDays} days`;
+            const badgeClass = isOverdue
+              ? "bg-rose-50 text-rose-700 border-rose-200"
+              : isDueToday
+              ? "bg-amber-50 text-amber-800 border-amber-200"
+              : "bg-blue-50 text-blue-700 border-blue-200";
 
             return (
               <div key={rem.id} className="bg-white border border-red-200 rounded-2xl p-4 sm:p-5 flex items-start justify-between gap-4 shadow-3xs">
@@ -128,7 +134,7 @@ export function AccountDetail({
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <h4 className="font-bold text-sm text-slate-900">{rem.description}</h4>
-                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold border ${isOverdue ? "bg-rose-50 text-rose-700 border-rose-200" : "bg-amber-50 text-amber-800 border-amber-200"}`}>{statusText}</span>
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold border ${badgeClass}`}>{statusText}</span>
                     </div>
                     <p className="text-xs text-slate-500 mt-1">Scheduled due date: <span className="font-mono font-semibold text-slate-700">{rem.dueDate.split("-").reverse().join("/")}</span></p>
                     <button onClick={onNavigateToReminders} className="text-xs font-semibold text-red-600 hover:text-red-700 inline-flex items-center gap-1 mt-2.5 transition-colors">Review Reminders <span className="text-sm">→</span></button>

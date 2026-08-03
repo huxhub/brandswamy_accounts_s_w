@@ -64,18 +64,24 @@ export const CHART_COLORS = [
 // ─── Utility Functions ─────────────────────────────────────────────────────────
 
 export function calcBalance(account: Account): number {
-  return account.transactions.reduce(
-    (bal, tx) => (tx.type === "credit" ? bal + tx.amount : bal - tx.amount),
-    account.openingBalance
-  );
+  return account.transactions
+    .filter(tx => !tx.isReminder)
+    .reduce(
+      (bal, tx) => (tx.type === "credit" ? bal + tx.amount : bal - tx.amount),
+      account.openingBalance
+    );
 }
 
 export function calcTotalCredit(account: Account): number {
-  return account.transactions.filter(t => t.type === "credit").reduce((s, t) => s + t.amount, 0);
+  return account.transactions
+    .filter(t => t.type === "credit" && !t.isReminder)
+    .reduce((s, t) => s + t.amount, 0);
 }
 
 export function calcTotalDebit(account: Account): number {
-  return account.transactions.filter(t => t.type === "debit").reduce((s, t) => s + t.amount, 0);
+  return account.transactions
+    .filter(t => t.type === "debit" && !t.isReminder)
+    .reduce((s, t) => s + t.amount, 0);
 }
 
 export function fmt(n: number): string {

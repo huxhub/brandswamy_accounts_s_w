@@ -294,6 +294,9 @@ export const getHistory = async (req, res) => {
       txWhere.programId = programId;
     }
 
+    // Pure reminders should not be treated as financial transactions in history
+    txWhere.isReminder = { [Op.ne]: true };
+
     // Fetch transactions with their parent account and program
     const transactions = await Transaction.findAll({
       where: txWhere,
@@ -336,6 +339,7 @@ export const getHistory = async (req, res) => {
     let totalDebits = 0;
 
     for (const tx of transactions) {
+      if (tx.isReminder) continue;
       const entry = accountMap[tx.accountId];
       if (!entry) continue;
       if (tx.type === 'credit') {

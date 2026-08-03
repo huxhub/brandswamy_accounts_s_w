@@ -22,13 +22,24 @@ const generateToken = (id) => {
 
 // Cross-site (e.g. Vercel frontend -> Render backend) requires SameSite=None + Secure;
 // localhost dev is not HTTPS, so it needs Lax + non-Secure instead.
-const setTokenCookie = (res, token) => {
-  res.cookie('token', token, {
+// Domain=.uxhub.in allows sharing cookies across sibling subdomains (brandswamy.uxhub.in & brandswamy-as-bd.uxhub.in).
+const getCookieOptions = () => {
+  const options = {
     httpOnly: true,
     secure: isProduction,
     sameSite: isProduction ? 'none' : 'lax',
-    maxAge: COOKIE_MAX_AGE_MS,
     path: '/',
+  };
+  if (process.env.COOKIE_DOMAIN) {
+    options.domain = process.env.COOKIE_DOMAIN;
+  }
+  return options;
+};
+
+const setTokenCookie = (res, token) => {
+  res.cookie('token', token, {
+    ...getCookieOptions(),
+    maxAge: COOKIE_MAX_AGE_MS,
   });
 };
 
@@ -101,12 +112,7 @@ export const loginUser = async (req, res) => {
 // @desc    Log out the current user
 // @route   POST /api/auth/logout
 export const logoutUser = (req, res) => {
-  res.clearCookie('token', {
-    httpOnly: true,
-    secure: isProduction,
-    sameSite: isProduction ? 'none' : 'lax',
-    path: '/',
-  });
+  res.clearCookie('token', getCookieOptions());
   res.json({ message: 'Logged out' });
 };
 
