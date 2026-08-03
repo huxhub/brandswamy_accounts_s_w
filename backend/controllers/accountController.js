@@ -137,7 +137,11 @@ export const addTransaction = async (req, res) => {
         programId: programId ? Number(programId) : null,
       });
 
-      res.status(201).json(formatTransaction(transaction));
+      const fullTx = await Transaction.findByPk(transaction.id, {
+        include: [{ model: Program, attributes: ['id', 'name'] }],
+      });
+
+      res.status(201).json(formatTransaction(fullTx));
     } else {
       res.status(404).json({ message: 'Account not found' });
     }
@@ -184,7 +188,12 @@ export const updateTransaction = async (req, res) => {
       if (programId !== undefined) transaction.programId = programId ? Number(programId) : null;
 
       await transaction.save();
-      res.json(formatTransaction(transaction));
+
+      const fullTx = await Transaction.findByPk(transaction.id, {
+        include: [{ model: Program, attributes: ['id', 'name'] }],
+      });
+
+      res.json(formatTransaction(fullTx));
     } else {
       res.status(404).json({ message: 'Transaction not found' });
     }
