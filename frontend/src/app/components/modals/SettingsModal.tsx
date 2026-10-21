@@ -32,13 +32,11 @@ export function SettingsModal({
           setUsername(u.username);
           setInitialUsername(u.username);
         } else {
-          const savedUser = localStorage.getItem("brandswamy_login_username") || "admin";
-          setUsername(savedUser);
-          setInitialUsername(savedUser);
+          setUsername("admin");
+          setInitialUsername("admin");
         }
       });
-      const savedPass = localStorage.getItem("brandswamy_login_password") || "admin123";
-      setPassword(savedPass);
+      setPassword("");
     }
   }, [showSettings]);
 
@@ -205,17 +203,8 @@ export function SettingsModal({
                     username: usernameChanged ? username.trim() : undefined,
                     password: passwordChanged ? password.trim() : undefined,
                   });
-                  if (username.trim()) {
-                    localStorage.setItem("brandswamy_login_username", username.trim());
-                  }
-                  if (password.trim()) {
-                    localStorage.setItem("brandswamy_login_password", password.trim());
-                  }
                   toast.success("Settings & account credentials saved!");
                 } else {
-                  if (username.trim()) {
-                    localStorage.setItem("brandswamy_login_username", username.trim());
-                  }
                   toast.success("Branding settings saved successfully!");
                 }
 

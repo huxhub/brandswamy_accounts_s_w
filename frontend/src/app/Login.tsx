@@ -5,17 +5,16 @@ import uxhubLogo from '../assets/logo.svg';
 
 export default function Login({ onLogin }: { onLogin: () => void }) {
   const [isLogin, setIsLogin] = useState(true);
-  const [username, setUsername] = useState(() => localStorage.getItem('brandswamy_login_username') || 'admin');
-  const [password, setPassword] = useState(() => localStorage.getItem('brandswamy_login_password') || 'admin123');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const savedUser = localStorage.getItem('brandswamy_login_username');
-    const savedPass = localStorage.getItem('brandswamy_login_password');
-    if (savedUser) setUsername(savedUser);
-    if (savedPass) setPassword(savedPass);
+    // Clear any previously cached auto-fill login credentials so inputs stay plain
+    localStorage.removeItem('brandswamy_login_username');
+    localStorage.removeItem('brandswamy_login_password');
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -29,8 +28,6 @@ export default function Login({ onLogin }: { onLogin: () => void }) {
       } else {
         await authService.register({ username, password });
       }
-      localStorage.setItem('brandswamy_login_username', username);
-      localStorage.setItem('brandswamy_login_password', password);
       onLogin();
     } catch (err: any) {
       setError(err.message);
@@ -72,10 +69,11 @@ export default function Login({ onLogin }: { onLogin: () => void }) {
                 <input
                   type="text"
                   required
+                  autoComplete="off"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   className="focus:ring-2 focus:ring-[#f56523]/30 focus:border-[#f56523] block w-full pl-10 sm:text-sm border-slate-300 rounded-xl h-11 bg-slate-50 border transition-all"
-                  placeholder="admin"
+                  placeholder="Enter username"
                 />
               </div>
             </div>
@@ -89,10 +87,11 @@ export default function Login({ onLogin }: { onLogin: () => void }) {
                 <input
                   type={showPassword ? "text" : "password"}
                   required
+                  autoComplete="current-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="focus:ring-2 focus:ring-[#f56523]/30 focus:border-[#f56523] block w-full pl-10 pr-10 sm:text-sm border-slate-300 rounded-xl h-11 bg-slate-50 border transition-all"
-                  placeholder="••••••••"
+                  placeholder="Enter password"
                 />
                 <button
                   type="button"
