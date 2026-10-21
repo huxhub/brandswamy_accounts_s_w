@@ -1,15 +1,22 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { authService } from '../services/authService';
 import { Lock, User, ArrowRight, Eye, EyeOff } from 'lucide-react';
-import brandswamyLogo from '../assets/logo.png';
+import uxhubLogo from '../assets/logo.svg';
 
 export default function Login({ onLogin }: { onLogin: () => void }) {
   const [isLogin, setIsLogin] = useState(true);
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
+  const [username, setUsername] = useState(() => localStorage.getItem('brandswamy_login_username') || 'admin');
+  const [password, setPassword] = useState(() => localStorage.getItem('brandswamy_login_password') || 'admin123');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const savedUser = localStorage.getItem('brandswamy_login_username');
+    const savedPass = localStorage.getItem('brandswamy_login_password');
+    if (savedUser) setUsername(savedUser);
+    if (savedPass) setPassword(savedPass);
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,6 +29,8 @@ export default function Login({ onLogin }: { onLogin: () => void }) {
       } else {
         await authService.register({ username, password });
       }
+      localStorage.setItem('brandswamy_login_username', username);
+      localStorage.setItem('brandswamy_login_password', password);
       onLogin();
     } catch (err: any) {
       setError(err.message);
@@ -31,10 +40,10 @@ export default function Login({ onLogin }: { onLogin: () => void }) {
   };
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] flex flex-col justify-center py-12 sm:px-6 lg:px-8 bg-gradient-to-br from-slate-50 to-red-50/30">
+    <div className="min-h-screen bg-[#f8fafc] flex flex-col justify-center py-12 sm:px-6 lg:px-8 bg-gradient-to-br from-slate-50 via-white to-orange-50/25">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <div className="flex justify-center">
-          <img src={brandswamyLogo} alt="Brandswamy Logo" className="w-20 h-20 object-contain" />
+          <img src={uxhubLogo} alt="UX HUB Logo" className="h-14 sm:h-16 w-auto object-contain drop-shadow-xs" />
         </div>
 
         <h2 className="mt-6 text-center text-3xl font-extrabold text-slate-900 tracking-tight">
@@ -65,7 +74,7 @@ export default function Login({ onLogin }: { onLogin: () => void }) {
                   required
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  className="focus:ring-accent focus:border-accent block w-full pl-10 sm:text-sm border-slate-300 rounded-xl h-11 bg-slate-50 border transition-colors"
+                  className="focus:ring-2 focus:ring-[#f56523]/30 focus:border-[#f56523] block w-full pl-10 sm:text-sm border-slate-300 rounded-xl h-11 bg-slate-50 border transition-all"
                   placeholder="admin"
                 />
               </div>
@@ -82,13 +91,13 @@ export default function Login({ onLogin }: { onLogin: () => void }) {
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="focus:ring-accent focus:border-accent block w-full pl-10 pr-10 sm:text-sm border-slate-300 rounded-xl h-11 bg-slate-50 border transition-colors"
+                  className="focus:ring-2 focus:ring-[#f56523]/30 focus:border-[#f56523] block w-full pl-10 pr-10 sm:text-sm border-slate-300 rounded-xl h-11 bg-slate-50 border transition-all"
                   placeholder="••••••••"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 transition-colors"
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-[#f56523] transition-colors"
                   title={showPassword ? "Hide password" : "Show password"}
                 >
                   {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
@@ -100,7 +109,7 @@ export default function Login({ onLogin }: { onLogin: () => void }) {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full flex justify-center py-3 px-4 border border-transparent rounded-xl shadow-sm text-sm font-bold text-white bg-accent hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent transition-all hover:shadow-lg disabled:opacity-70 disabled:cursor-not-allowed group"
+                className="w-full flex justify-center py-3.5 px-4 border border-transparent rounded-xl shadow-md text-sm font-bold text-white bg-slate-900 hover:bg-[#f56523] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#f56523] transition-all duration-200 hover:shadow-lg hover:shadow-orange-500/25 active:scale-[0.99] disabled:opacity-70 disabled:cursor-not-allowed group"
               >
                 {loading ? 'Processing...' : (isLogin ? 'Sign in' : 'Create account')}
                 {!loading && <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />}

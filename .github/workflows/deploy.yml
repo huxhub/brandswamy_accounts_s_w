@@ -20,11 +20,16 @@ jobs:
         with:
           node-version: 20
           cache: 'npm'
+          cache-dependency-path: |
+            package-lock.json
+            backend/package-lock.json
+            frontend/package-lock.json
 
       - name: Install Dependencies
         run: |
-          npm install
-          npm run install-all
+          npm ci || npm install
+          npm --prefix backend ci || npm --prefix backend install
+          npm --prefix frontend ci || npm --prefix frontend install
 
       - name: Build Frontend
         run: |
@@ -63,8 +68,9 @@ jobs:
             git reset --hard origin/main
             
             echo "📦 Installing Dependencies..."
-            npm install
-            npm run install-all
+            npm ci || npm install
+            npm --prefix backend ci || npm --prefix backend install
+            npm --prefix frontend ci || npm --prefix frontend install
             
             echo "🛠️ Building Frontend..."
             npm run build --prefix frontend

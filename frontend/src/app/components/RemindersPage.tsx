@@ -62,13 +62,13 @@ export function RemindersPage({
           <h2 className="text-2xl font-bold text-foreground">Reminders</h2>
           <p className="text-sm text-muted-foreground mt-0.5">Manage your active alerts and completed tasks.</p>
         </div>
-        <button onClick={() => { if (accounts.length === 0) { toast.warning("Please add an account first!"); return; } setShowReminderModal(true); }} className="flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2.5 rounded-xl text-sm font-semibold shadow-sm transition-all">
+        <button onClick={() => { if (accounts.length === 0) { toast.warning("Please add an account first!"); return; } setShowReminderModal(true); }} className="flex items-center justify-center gap-2 bg-slate-900 hover:bg-[#f56523] text-white px-4 py-2.5 rounded-xl text-sm font-semibold shadow-sm transition-all hover:shadow-md hover:shadow-orange-500/25 active:scale-95">
           <Bell size={16} /> Set Reminder
         </button>
       </div>
 
       <div className="flex items-center gap-2 border-b border-border pb-1">
-        <button onClick={() => setTab("active")} className={`px-4 py-2 text-sm font-semibold rounded-lg transition-colors ${tab === "active" ? "bg-red-50 text-red-600" : "text-muted-foreground hover:bg-gray-100"}`}>
+        <button onClick={() => setTab("active")} className={`px-4 py-2 text-sm font-semibold rounded-lg transition-colors ${tab === "active" ? "bg-orange-50 text-[#f56523]" : "text-muted-foreground hover:bg-orange-50/40 hover:text-[#f56523]"}`}>
           Active Reminders ({activeReminders.length})
         </button>
         <button onClick={() => setTab("completed")} className={`px-4 py-2 text-sm font-semibold rounded-lg transition-colors ${tab === "completed" ? "bg-emerald-50 text-emerald-700" : "text-muted-foreground hover:bg-gray-100"}`}>
@@ -154,16 +154,16 @@ export function RemindersPage({
               </div>
               <div>
                 <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Amount (₹) <span className="font-normal text-muted-foreground/60">(optional)</span></label>
-                <input type="number" value={reminderAmount} onChange={e => setReminderAmount(e.target.value)} placeholder="0.00" min="0" step="0.01" className="w-full border border-border rounded-lg px-3 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-red-500/30 bg-input-background" />
+                <input type="number" value={reminderAmount} onChange={e => setReminderAmount(e.target.value)} placeholder="0.00" min="0" step="0.01" className="w-full border border-border rounded-lg px-3 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#f56523]/30 focus:border-[#f56523] bg-input-background" />
               </div>
               <div>
                 <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Due Date</label>
-                <input type="date" value={reminderDate} onChange={e => setReminderDate(e.target.value)} className="w-full border border-border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-500/30 bg-input-background" />
+                <input type="date" value={reminderDate} onChange={e => setReminderDate(e.target.value)} className="w-full border border-border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#f56523]/30 focus:border-[#f56523] bg-input-background" />
               </div>
             </div>
             <div className="px-6 pb-6 flex gap-3">
               <button type="button" onClick={() => setShowReminderModal(false)} className="flex-1 py-2.5 rounded-lg border border-border text-sm font-semibold text-foreground hover:bg-gray-50 transition-colors">Cancel</button>
-              <button type="button" onClick={saveReminder} className="flex-1 py-2.5 rounded-lg bg-red-600 text-white text-sm font-semibold hover:bg-red-700 transition-colors">Save Reminder</button>
+              <button type="button" onClick={saveReminder} className="flex-1 py-2.5 rounded-xl bg-slate-900 text-white text-sm font-semibold hover:bg-[#f56523] transition-all duration-200 shadow-sm hover:shadow-md hover:shadow-orange-500/25 active:scale-[0.99]">Save Reminder</button>
             </div>
           </div>
         </div>

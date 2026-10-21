@@ -420,7 +420,7 @@ export function HistoryPage({ accounts, programs = [], onViewDoc }: { accounts: 
                   {tx.document?.name && onViewDoc && (
                     <button
                       onClick={() => onViewDoc(tx.document!)}
-                      className="flex items-center gap-1.5 px-2 py-1.5 rounded-md bg-red-50 hover:bg-red-100 text-red-600 transition-colors self-start"
+                      className="flex items-center gap-1.5 px-2 py-1.5 rounded-md bg-orange-50 hover:bg-orange-100 text-[#f56523] transition-colors self-start"
                     >
                       {tx.document.mimeType?.startsWith("image/") ? <Image size={14} /> : <FileText size={14} />}
                       <span className="text-xs font-medium max-w-[150px] truncate">{tx.document.name}</span>
@@ -494,7 +494,7 @@ export function HistoryPage({ accounts, programs = [], onViewDoc }: { accounts: 
                           {tx.document?.name && onViewDoc ? (
                             <button
                               onClick={() => onViewDoc(tx.document!)}
-                              className="flex items-center gap-1 px-2 py-1 rounded-md bg-red-50 hover:bg-red-100 text-red-600 transition-colors mx-auto"
+                              className="flex items-center gap-1 px-2 py-1 rounded-md bg-orange-50 hover:bg-orange-100 text-[#f56523] transition-colors mx-auto"
                               title={tx.document.name}
                             >
                               {tx.document.mimeType?.startsWith("image/") ? <Image size={12} /> : <FileText size={12} />}

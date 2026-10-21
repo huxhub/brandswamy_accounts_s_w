@@ -1,5 +1,5 @@
 import { Menu, ArrowLeftRight, FileDown, Tag } from "lucide-react";
-import brandswamyLogo from "../../assets/logo.png";
+import uxhubLogo from "../../assets/logo.svg";
 import type { AppSettings } from "../hooks/useSettings";
 
 export function Header({
@@ -27,11 +27,9 @@ export function Header({
           <Menu size={20} />
         </button>
 
-        {settings.logoUrl ? (
-          <img src={settings.logoUrl} className="w-8 h-8 sm:w-9 sm:h-9 object-contain bg-white/10 p-1 rounded-lg" alt="Logo" />
-        ) : (
-          <img src={brandswamyLogo} className="w-8 h-8 sm:w-9 sm:h-9 object-contain bg-white/10 p-1 rounded-lg" alt="Logo" />
-        )}
+        <div className="w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center bg-white p-1 rounded-lg shadow-xs flex-shrink-0">
+          <img src={uxhubLogo} className="w-full h-full object-contain" alt="UXHUB Logo" />
+        </div>
 
         <div className="flex flex-col">
           <span className="text-base sm:text-lg font-bold tracking-wider text-white leading-none font-sans">
@@ -47,7 +45,7 @@ export function Header({
         {onOpenPrograms && (
           <button
             onClick={onOpenPrograms}
-            className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg bg-white/15 hover:bg-white/25 text-white text-xs sm:text-sm font-semibold transition-all"
+            className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-white/10 hover:bg-[#f56523] border border-white/10 text-white text-xs sm:text-sm font-semibold transition-all duration-200 shadow-xs hover:shadow-md hover:shadow-orange-500/25 active:scale-95"
           >
             <Tag size={16} />
             <span>Programs</span>
@@ -55,7 +53,7 @@ export function Header({
         )}
         <button
           onClick={onOpenExchange}
-          className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg bg-white/15 hover:bg-white/25 text-white text-xs sm:text-sm font-semibold transition-all"
+          className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-white/10 hover:bg-[#f56523] border border-white/10 text-white text-xs sm:text-sm font-semibold transition-all duration-200 shadow-xs hover:shadow-md hover:shadow-orange-500/25 active:scale-95"
         >
           <ArrowLeftRight size={16} />
           <span className="hidden sm:inline">Inter-Company Transfer</span>
@@ -63,7 +61,7 @@ export function Header({
         </button>
         <button
           onClick={onOpenReport}
-          className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg bg-white/15 hover:bg-white/25 text-white text-xs sm:text-sm font-semibold transition-all"
+          className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-white/10 hover:bg-[#f56523] border border-white/10 text-white text-xs sm:text-sm font-semibold transition-all duration-200 shadow-xs hover:shadow-md hover:shadow-orange-500/25 active:scale-95"
         >
           <FileDown size={16} />
           <span className="hidden sm:inline">Monthly Report</span>

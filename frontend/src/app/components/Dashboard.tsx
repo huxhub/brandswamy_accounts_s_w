@@ -141,9 +141,9 @@ export function Dashboard({
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <h3 className="font-semibold text-sm text-foreground flex items-center gap-1.5">
-              <Bell size={15} className="text-red-600 animate-pulse" /> Upcoming & Overdue Reminders
+              <Bell size={15} className="text-[#f56523] animate-pulse" /> Upcoming & Overdue Reminders
             </h3>
-            <button onClick={() => onNavigate("reminders")} className="text-xs font-semibold text-red-600 hover:text-red-700 flex items-center gap-1 transition-colors">
+            <button onClick={() => onNavigate("reminders")} className="text-xs font-semibold text-[#f56523] hover:text-orange-700 flex items-center gap-1 transition-colors">
               View All ({upcomingReminders.length}) <ChevronRight size={14} />
             </button>
           </div>
@@ -245,7 +245,7 @@ export function Dashboard({
             const idx = accounts.findIndex(a => a.id === acc.id);
             const color = CHART_COLORS[idx % CHART_COLORS.length];
             return (
-              <button key={acc.id} onClick={() => onNavigate(acc.id)} className="bg-white rounded-xl sm:rounded-2xl border border-border p-3 sm:p-5 flex flex-col gap-2 sm:gap-3 text-left hover:shadow-md transition-all group relative overflow-hidden">
+              <button key={acc.id} onClick={() => onNavigate(acc.id)} className="bg-white rounded-xl sm:rounded-2xl border border-border p-3 sm:p-5 flex flex-col gap-2 sm:gap-3 text-left hover:shadow-md hover:border-[#f56523]/40 transition-all group relative overflow-hidden">
                 <div className="flex items-center justify-between">
                   <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${color}15` }}>
                     {(() => { const Icon = accountTypeIcon(acc.type); return <Icon size={14} style={{ color: color }} />; })()}

@@ -72,6 +72,10 @@ export const authService = {
         return null;
       }
       const data = await response.json();
+      if (!data || data.authenticated === false || data.user === null) {
+        localStorage.removeItem('auth_token');
+        return null;
+      }
       if (data?.token) {
         localStorage.setItem('auth_token', data.token);
       }

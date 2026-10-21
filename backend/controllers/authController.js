@@ -116,16 +116,39 @@ export const logoutUser = (req, res) => {
   res.json({ message: 'Logged out' });
 };
 
-// @desc    Get the currently authenticated user
+// @desc    Get the currently authenticated user (or null if unauthenticated)
 // @route   GET /api/auth/me
-export const getMe = (req, res) => {
-  const token = generateToken(req.user.id);
-  res.json({
-    _id: req.user.id,
-    username: req.user.username,
-    isAdmin: req.user.isAdmin,
-    token,
-  });
+export const getMe = async (req, res) => {
+  const authHeader = req.headers.authorization;
+  const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
+  const token = bearerToken || req.cookies?.token;
+
+  if (!token) {
+    return res.json({ user: null, authenticated: false });
+  }
+
+  try {
+    if (!process.env.JWT_SECRET) {
+      return res.status(500).json({ message: 'Server configuration error' });
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findByPk(decoded.id, { attributes: { exclude: ['password'] } });
+
+    if (!user) {
+      return res.json({ user: null, authenticated: false });
+    }
+
+    const refreshedToken = generateToken(user.id);
+    return res.json({
+      _id: user.id,
+      username: user.username,
+      isAdmin: user.isAdmin,
+      token: refreshedToken,
+    });
+  } catch {
+    return res.json({ user: null, authenticated: false });
+  }
 };
 
 // @desc    Change the current user's own password

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import brandswamyLogo from "../../assets/logo.png";
+import uxhubLogo from "../../assets/logo.svg";
 
 export interface AppSettings {
   companyName: string;
@@ -9,10 +9,10 @@ export interface AppSettings {
 }
 
 const DEFAULTS: AppSettings = {
-  companyName: "BRANDSWAMY",
+  companyName: "UXHUB",
   companySubtitle: "Accounts Manager",
-  logoUrl: brandswamyLogo,
-  themeColor: "#c21818",
+  logoUrl: uxhubLogo,
+  themeColor: "#111827",
 };
 
 export function useSettings() {
@@ -20,7 +20,12 @@ export function useSettings() {
     const saved = localStorage.getItem("brandswamy_settings") || localStorage.getItem("chisel_settings");
     if (saved) {
       try {
-        return { ...DEFAULTS, ...JSON.parse(saved) };
+        const parsed = JSON.parse(saved);
+        // If themeColor was the old red #c21818, update to UX HUB black
+        if (parsed.themeColor === "#c21818") {
+          parsed.themeColor = "#111827";
+        }
+        return { ...DEFAULTS, ...parsed, logoUrl: uxhubLogo };
       } catch {
         return DEFAULTS;
       }
@@ -32,8 +37,8 @@ export function useSettings() {
 
   useEffect(() => {
     const root = document.documentElement;
-    root.style.setProperty("--primary", settings.themeColor);
-    root.style.setProperty("--accent", settings.themeColor);
+    root.style.setProperty("--primary", settings.themeColor || "#111827");
+    root.style.setProperty("--accent", "#f56523");
   }, [settings.themeColor]);
 
   return {

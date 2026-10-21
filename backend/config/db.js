@@ -42,6 +42,12 @@ const connectDB = async () => {
     // Authenticate and sync the configured database
     await sequelize.authenticate();
 
+    // Ensure all models are registered
+    await import('../models/User.js');
+    await import('../models/Account.js');
+    await import('../models/Program.js');
+    await import('../models/Transaction.js');
+
     // sequelize.sync() creates missing tables but won't add columns to ones
     // that already exist, so upgrade existing Users tables by hand.
     try {

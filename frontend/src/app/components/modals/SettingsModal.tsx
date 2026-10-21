@@ -31,21 +31,26 @@ export function SettingsModal({
         if (u?.username) {
           setUsername(u.username);
           setInitialUsername(u.username);
+        } else {
+          const savedUser = localStorage.getItem("brandswamy_login_username") || "admin";
+          setUsername(savedUser);
+          setInitialUsername(savedUser);
         }
       });
-      setPassword("");
+      const savedPass = localStorage.getItem("brandswamy_login_password") || "admin123";
+      setPassword(savedPass);
     }
   }, [showSettings]);
 
   if (!showSettings) return null;
 
   const PRESETS = [
-    { name: "Brand Red", color: "#c21818" },
-    { name: "Navy Blue", color: "#1e3a8a" },
-    { name: "Emerald Green", color: "#047857" },
-    { name: "Royal Blue", color: "#2563eb" },
+    { name: "UX HUB Dark", color: "#111827" },
+    { name: "UX HUB Orange", color: "#f56523" },
+    { name: "Midnight Navy", color: "#0f172a" },
     { name: "Charcoal Black", color: "#1f2937" },
-    { name: "Dark Plum", color: "#581c87" },
+    { name: "Emerald Green", color: "#047857" },
+    { name: "Brand Red", color: "#c21818" },
   ];
 
   return (
@@ -200,8 +205,17 @@ export function SettingsModal({
                     username: usernameChanged ? username.trim() : undefined,
                     password: passwordChanged ? password.trim() : undefined,
                   });
+                  if (username.trim()) {
+                    localStorage.setItem("brandswamy_login_username", username.trim());
+                  }
+                  if (password.trim()) {
+                    localStorage.setItem("brandswamy_login_password", password.trim());
+                  }
                   toast.success("Settings & account credentials saved!");
                 } else {
+                  if (username.trim()) {
+                    localStorage.setItem("brandswamy_login_username", username.trim());
+                  }
                   toast.success("Branding settings saved successfully!");
                 }
 

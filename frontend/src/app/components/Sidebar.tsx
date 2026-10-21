@@ -42,7 +42,7 @@ export function Sidebar({
                 key={acc.id}
                 onClick={() => navTo(acc.id)}
                 className={`w-full text-left px-4 py-3 flex items-center justify-between gap-3 transition-all ${
-                  isActive ? "bg-slate-50 border-r-4 border-r-red-600" : "hover:bg-slate-50/80"
+                  isActive ? "bg-orange-50/70 border-r-4 border-r-[#f56523]" : "hover:bg-slate-50/80"
                 }`}
               >
                 <div className="flex items-center gap-3 min-w-0">
@@ -84,11 +84,11 @@ export function Sidebar({
               onClick={() => navTo("dashboard")}
               className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-bold transition-all ${
                 activeTab === "dashboard"
-                  ? "bg-red-50/70 text-red-600 border-l-4 border-l-red-600"
-                  : "text-slate-700 hover:bg-slate-50"
+                  ? "bg-orange-50 text-[#f56523] border-l-4 border-l-[#f56523] shadow-xs"
+                  : "text-slate-700 hover:bg-orange-50/40 hover:text-[#f56523]"
               }`}
             >
-              <LayoutDashboard size={18} className={`flex-shrink-0 ${activeTab === "dashboard" ? "text-red-600" : "text-slate-500"}`} />
+              <LayoutDashboard size={18} className={`flex-shrink-0 ${activeTab === "dashboard" ? "text-[#f56523]" : "text-slate-500"}`} />
               <span className="whitespace-nowrap truncate">Dashboard</span>
             </button>
 
@@ -96,16 +96,16 @@ export function Sidebar({
               onClick={() => navTo("reminders")}
               className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-lg text-sm font-bold transition-all ${
                 activeTab === "reminders"
-                  ? "bg-red-50/70 text-red-600 border-l-4 border-l-red-600"
-                  : "text-slate-700 hover:bg-slate-50"
+                  ? "bg-orange-50 text-[#f56523] border-l-4 border-l-[#f56523] shadow-xs"
+                  : "text-slate-700 hover:bg-orange-50/40 hover:text-[#f56523]"
               }`}
             >
               <div className="flex items-center gap-3 min-w-0">
-                <Bell size={18} className={`flex-shrink-0 ${activeTab === "reminders" ? "text-red-600" : "text-slate-500"}`} />
-                <span className={`whitespace-nowrap truncate ${activeTab === "reminders" ? "text-red-600" : "text-slate-700"}`}>Reminders</span>
+                <Bell size={18} className={`flex-shrink-0 ${activeTab === "reminders" ? "text-[#f56523]" : "text-slate-500"}`} />
+                <span className={`whitespace-nowrap truncate ${activeTab === "reminders" ? "text-[#f56523]" : "text-slate-700"}`}>Reminders</span>
               </div>
               {activeRemindersCount > 0 && (
-                <span className="w-5 h-5 rounded-full bg-[#f87171] text-white text-xs font-bold flex items-center justify-center flex-shrink-0 shadow-2xs">
+                <span className="w-5 h-5 rounded-full bg-[#f56523] text-white text-xs font-bold flex items-center justify-center flex-shrink-0 shadow-xs">
                   {activeRemindersCount}
                 </span>
               )}
@@ -115,11 +115,11 @@ export function Sidebar({
               onClick={() => navTo("history")}
               className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-bold transition-all ${
                 activeTab === "history"
-                  ? "bg-red-50/70 text-red-600 border-l-4 border-l-red-600"
-                  : "text-slate-700 hover:bg-slate-50"
+                  ? "bg-orange-50 text-[#f56523] border-l-4 border-l-[#f56523] shadow-xs"
+                  : "text-slate-700 hover:bg-orange-50/40 hover:text-[#f56523]"
               }`}
             >
-              <History size={18} className={`flex-shrink-0 ${activeTab === "history" ? "text-red-600" : "text-slate-500"}`} />
+              <History size={18} className={`flex-shrink-0 ${activeTab === "history" ? "text-[#f56523]" : "text-slate-500"}`} />
               <span className="whitespace-nowrap truncate">Transaction Summary</span>
             </button>
           </div>
