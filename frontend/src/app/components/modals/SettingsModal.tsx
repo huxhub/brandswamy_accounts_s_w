@@ -159,6 +159,7 @@ export function SettingsModal({
               <div className="relative">
                 <input
                   type={showPassword ? "text" : "password"}
+                  autoComplete="new-password"
                   value={password}
                   onChange={e => setPassword(e.target.value)}
                   placeholder="Enter new password (leave blank to keep current)"

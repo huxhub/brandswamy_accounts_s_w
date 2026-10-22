@@ -10,11 +10,20 @@ export default function Login({ onLogin }: { onLogin: () => void }) {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
-    // Clear any previously cached auto-fill login credentials so inputs stay plain
+    // Explicitly reset credentials and clear stored values
+    setUsername('');
+    setPassword('');
     localStorage.removeItem('brandswamy_login_username');
     localStorage.removeItem('brandswamy_login_password');
+
+    // Keep fields read-only for initial render cycle to block browser password manager auto-fill
+    const timer = setTimeout(() => {
+      setIsReady(true);
+    }, 200);
+    return () => clearTimeout(timer);
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -53,7 +62,13 @@ export default function Login({ onLogin }: { onLogin: () => void }) {
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
         <div className="bg-white py-8 px-4 shadow-xl shadow-slate-200/50 sm:rounded-2xl sm:px-10 border border-slate-100">
-          <form className="space-y-6" onSubmit={handleSubmit}>
+          <form className="space-y-6" onSubmit={handleSubmit} autoComplete="off">
+            {/* Decoy hidden inputs to deflect browser autofill managers */}
+            <div style={{ position: 'absolute', opacity: 0, height: 0, width: 0, zIndex: -1, overflow: 'hidden' }} aria-hidden="true">
+              <input type="text" name="fake_username" tabIndex={-1} autoComplete="off" />
+              <input type="password" name="fake_password" tabIndex={-1} autoComplete="off" />
+            </div>
+
             {error && (
               <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-md">
                 <p className="text-sm text-red-700">{error}</p>
@@ -68,8 +83,12 @@ export default function Login({ onLogin }: { onLogin: () => void }) {
                 </div>
                 <input
                   type="text"
+                  id="login_username"
+                  name="login_username"
                   required
                   autoComplete="off"
+                  readOnly={!isReady}
+                  onFocus={() => setIsReady(true)}
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   className="focus:ring-2 focus:ring-[#f56523]/30 focus:border-[#f56523] block w-full pl-10 sm:text-sm border-slate-300 rounded-xl h-11 bg-slate-50 border transition-all"
@@ -86,8 +105,12 @@ export default function Login({ onLogin }: { onLogin: () => void }) {
                 </div>
                 <input
                   type={showPassword ? "text" : "password"}
+                  id="login_password"
+                  name="login_password"
                   required
-                  autoComplete="current-password"
+                  autoComplete="new-password"
+                  readOnly={!isReady}
+                  onFocus={() => setIsReady(true)}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="focus:ring-2 focus:ring-[#f56523]/30 focus:border-[#f56523] block w-full pl-10 pr-10 sm:text-sm border-slate-300 rounded-xl h-11 bg-slate-50 border transition-all"
