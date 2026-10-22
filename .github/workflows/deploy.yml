@@ -39,10 +39,21 @@ jobs:
     name: Deploy to DigitalOcean Droplet
     needs: build-and-verify
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' && secrets.DROPLET_HOST != ''
+    if: github.ref == 'refs/heads/main'
 
     steps:
+      - name: Check DigitalOcean Secrets
+        id: check-secrets
+        run: |
+          if [ -z "${{ secrets.DROPLET_HOST }}" ]; then
+            echo "DROPLET_HOST secret is not configured. Skipping deployment."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: SSH and Deploy to DigitalOcean
+        if: steps.check-secrets.outputs.skip != 'true'
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.DROPLET_HOST }}
