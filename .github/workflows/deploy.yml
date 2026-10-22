@@ -39,7 +39,7 @@ jobs:
     name: Deploy to DigitalOcean Droplet
     needs: build-and-verify
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' && secrets.DROPLET_HOST != ''
 
     steps:
       - name: SSH and Deploy to DigitalOcean
